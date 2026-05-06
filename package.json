@@ -5,7 +5,7 @@
   "description": "iTAS BackOffice System — IT Asset & Maintenance Contract Management",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
