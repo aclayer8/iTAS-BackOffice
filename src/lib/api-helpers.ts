@@ -143,8 +143,8 @@ export async function createAuditLog({
   action: string;
   entityType: string;
   entityId?: string;
-  oldValues?: Record<string, unknown>;
-  newValues?: Record<string, unknown>;
+  oldValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
   description?: string;
   req?: NextRequest;
 }) {
@@ -158,8 +158,8 @@ export async function createAuditLog({
       action: action as never,
       entityType,
       entityId,
-      oldValues,
-      newValues,
+      oldValues: oldValues as never,
+      newValues: newValues as never,
       description,
       ipAddress,
       userAgent,
