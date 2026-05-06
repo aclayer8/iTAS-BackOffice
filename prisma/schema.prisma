@@ -1,0 +1,689 @@
+// =============================================================
+// iTAS BackOffice System — Production Prisma Schema
+// PostgreSQL 16 | Prisma 5
+// =============================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================
+// ENUMS
+// =============================================================
+
+enum UserRole {
+  ADMIN
+  SALE
+  ENGINEER
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+  BLACKLISTED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING_RENEWAL
+}
+
+enum SlaType {
+  ONSITE_NBD       // Next Business Day
+  ONSITE_4HR       // 4-Hour Response
+  REMOTE_NBD
+  REMOTE_4HR
+  BEST_EFFORT
+  CUSTOM
+}
+
+enum SupportType {
+  BUSINESS_HOURS   // Mon-Fri 8-17
+  EXTENDED         // Mon-Sat 8-20
+  TWENTYFOUR_SEVEN // 24x7x365
+  CUSTOM
+}
+
+enum ItemType {
+  HARDWARE
+  LICENSE
+  SUBSCRIPTION
+  SERVICE
+  SUPPORT
+}
+
+enum AssetType {
+  FIREWALL
+  SWITCH
+  WIRELESS_AP
+  SERVER
+  STORAGE
+  UPS
+  ROUTER
+  LOAD_BALANCER
+  OTHER
+}
+
+enum AssetLifecycleStatus {
+  ACTIVE
+  WARRANTY_EXPIRED
+  EOS               // End of Sale
+  EOL               // End of Life
+  DECOMMISSIONED
+  IN_STORAGE
+  REPLACED
+}
+
+enum AssetHistoryEvent {
+  INSTALLED
+  REPLACED
+  RMA_SENT
+  RMA_RECEIVED
+  RELOCATED
+  FIRMWARE_UPGRADED
+  CONFIGURATION_CHANGED
+  DECOMMISSIONED
+  RENEWED
+  NOTED
+}
+
+enum LicenseRenewalStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  RENEWED
+  CANCELLED
+}
+
+enum AttachmentEntityType {
+  CUSTOMER
+  CONTRACT
+  ASSET
+  LICENSE
+  RENEWAL
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  EXPORT
+  LOGIN
+  LOGOUT
+  BULK_IMPORT
+  GENERATE_CERTIFICATE
+}
+
+enum NotificationType {
+  WARRANTY_EXPIRING
+  CONTRACT_EXPIRING
+  LICENSE_EXPIRING
+  RENEWAL_DUE
+  SYSTEM
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  DISMISSED
+}
+
+// =============================================================
+// USERS & AUTH
+// =============================================================
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String
+  passwordHash  String     @map("password_hash")
+  role          UserRole   @default(VIEWER)
+  status        UserStatus @default(ACTIVE)
+  avatarUrl     String?    @map("avatar_url")
+  phone         String?
+  department    String?
+  lastLoginAt   DateTime?  @map("last_login_at")
+  lastLoginIp   String?    @map("last_login_ip")
+  refreshToken  String?    @map("refresh_token")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  deletedAt     DateTime?  @map("deleted_at")
+
+  // Relations
+  assignedAssets   Asset[]         @relation("EngineerOwner")
+  auditLogs        AuditLog[]
+  activityLogs     ActivityLog[]
+  notifications    Notification[]
+  contracts        Contract[]      @relation("CreatedByUser")
+  renewals         ContractRenewal[] @relation("CreatedByUser")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// =============================================================
+// VENDORS
+// =============================================================
+
+model Vendor {
+  id            String    @id @default(cuid())
+  name          String
+  shortName     String?   @map("short_name")
+  country       String?
+  website       String?
+  supportPortal String?   @map("support_portal")
+  supportEmail  String?   @map("support_email")
+  supportPhone  String?   @map("support_phone")
+  contactPerson String?   @map("contact_person")
+  note          String?
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  contracts     Contract[]
+  assets        Asset[]
+  licenses      License[]
+
+  @@index([name])
+  @@index([isActive])
+  @@map("vendors")
+}
+
+// =============================================================
+// CUSTOMERS
+// =============================================================
+
+model Customer {
+  id             String         @id @default(cuid())
+  companyName    String         @map("company_name")
+  shortName      String?        @map("short_name")
+  taxId          String?        @unique @map("tax_id")
+  address        String?
+  billingAddress String?        @map("billing_address")
+  contactPerson  String?        @map("contact_person")
+  contactPhone   String?        @map("contact_phone")
+  contactEmail   String?        @map("contact_email")
+  website        String?
+  industry       String?
+  status         CustomerStatus @default(ACTIVE)
+  tier           String?        // GOLD, SILVER, BRONZE, PLATINUM
+  note           String?
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  // Relations
+  sites        CustomerSite[]
+  contracts    Contract[]
+  assets       Asset[]
+  licenses     License[]
+  attachments  Attachment[]
+  activities   ActivityLog[]
+  tags         CustomerTag[]
+
+  @@index([companyName])
+  @@index([taxId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("customers")
+}
+
+model CustomerSite {
+  id            String    @id @default(cuid())
+  customerId    String    @map("customer_id")
+  siteName      String    @map("site_name")
+  address       String?
+  district      String?
+  province      String?
+  postalCode    String?   @map("postal_code")
+  country       String    @default("Thailand")
+  contactPerson String?   @map("contact_person")
+  contactPhone  String?   @map("contact_phone")
+  contactEmail  String?   @map("contact_email")
+  isHeadOffice  Boolean   @default(false) @map("is_head_office")
+  note          String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  customer    Customer   @relation(fields: [customerId], references: [id])
+  contracts   Contract[]
+  assets      Asset[]
+  licenses    License[]
+
+  @@index([customerId])
+  @@index([province])
+  @@index([deletedAt])
+  @@map("customer_sites")
+}
+
+// =============================================================
+// CONTRACTS
+// =============================================================
+
+model Contract {
+  id              String         @id @default(cuid())
+  contractNo      String         @unique @map("contract_no")   // Auto: iTAS-MA260001
+  soNo            String?        @map("so_no")
+  poNo            String?        @map("po_no")
+  quotationNo     String?        @map("quotation_no")
+  customerId      String         @map("customer_id")
+  siteId          String?        @map("site_id")
+  vendorId        String?        @map("vendor_id")
+  createdById     String         @map("created_by_id")
+  serviceDesc     String?        @map("service_description")
+  startDate       DateTime       @map("start_date")
+  endDate         DateTime       @map("end_date")
+  slaType         SlaType        @default(ONSITE_NBD) @map("sla_type")
+  supportType     SupportType    @default(BUSINESS_HOURS) @map("support_type")
+  status          ContractStatus @default(DRAFT)
+  autoRenew       Boolean        @default(false) @map("auto_renew")
+  totalValue      Decimal?       @db.Decimal(15, 2) @map("total_value")
+  currency        String         @default("THB")
+  remark          String?
+  version         Int            @default(1)
+  parentId        String?        @map("parent_id")           // For versioning/cloning
+  isRenewal       Boolean        @default(false) @map("is_renewal")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  deletedAt       DateTime?      @map("deleted_at")
+
+  // Relations
+  customer     Customer          @relation(fields: [customerId], references: [id])
+  site         CustomerSite?     @relation(fields: [siteId], references: [id])
+  vendor       Vendor?           @relation(fields: [vendorId], references: [id])
+  createdBy    User              @relation("CreatedByUser", fields: [createdById], references: [id])
+  parent       Contract?         @relation("ContractVersions", fields: [parentId], references: [id])
+  versions     Contract[]        @relation("ContractVersions")
+  items        ContractItem[]
+  renewals     ContractRenewal[]
+  attachments  Attachment[]
+  activities   ActivityLog[]
+
+  @@index([contractNo])
+  @@index([customerId])
+  @@index([siteId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([soNo])
+  @@index([poNo])
+  @@index([deletedAt])
+  @@map("contracts")
+}
+
+model ContractItem {
+  id              String    @id @default(cuid())
+  contractId      String    @map("contract_id")
+  itemType        ItemType  @map("item_type")
+  partNumber      String?   @map("part_number")
+  brand           String?
+  model           String?
+  description     String?
+  serialNumber    String?   @map("serial_number")     // NULLABLE — not all items have S/N
+  quantity        Int?                                 // NULLABLE — for hardware with 1 unit
+  unit            String?                              // EA, LOT, LICENSE, USER, DEVICE
+  startDate       DateTime? @map("start_date")
+  endDate         DateTime? @map("end_date")
+  sla             String?                              // Custom SLA override per item
+  vendorSupport   String?   @map("vendor_support")    // Vendor case/TAC reference
+  warrantyRef     String?   @map("warranty_ref")      // Link to asset warranty
+  unitPrice       Decimal?  @db.Decimal(15, 2) @map("unit_price")
+  totalPrice      Decimal?  @db.Decimal(15, 2) @map("total_price")
+  remark          String?
+  sortOrder       Int       @default(0) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  contract  Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([serialNumber])
+  @@index([partNumber])
+  @@index([itemType])
+  @@map("contract_items")
+}
+
+model ContractRenewal {
+  id             String         @id @default(cuid())
+  contractId     String         @map("contract_id")
+  renewalNo      String         @unique @map("renewal_no")  // Auto: RNW-260001
+  createdById    String         @map("created_by_id")
+  startDate      DateTime       @map("start_date")
+  endDate        DateTime       @map("end_date")
+  renewalValue   Decimal?       @db.Decimal(15, 2) @map("renewal_value")
+  currency       String         @default("THB")
+  soNo           String?        @map("so_no")
+  poNo           String?        @map("po_no")
+  quotationNo    String?        @map("quotation_no")
+  status         ContractStatus @default(DRAFT)
+  note           String?
+  sentAt         DateTime?      @map("sent_at")             // When proposal sent
+  approvedAt     DateTime?      @map("approved_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  // Relations
+  contract    Contract     @relation(fields: [contractId], references: [id])
+  createdBy   User         @relation("CreatedByUser", fields: [createdById], references: [id])
+  attachments Attachment[]
+
+  @@index([contractId])
+  @@index([status])
+  @@index([endDate])
+  @@index([deletedAt])
+  @@map("contract_renewals")
+}
+
+// =============================================================
+// ASSETS
+// =============================================================
+
+model Asset {
+  id               String               @id @default(cuid())
+  assetCode        String               @unique @map("asset_code")  // Auto: AST-2600001
+  brand            String
+  model            String
+  serialNumber     String?              @map("serial_number")        // NULLABLE for software
+  assetType        AssetType            @map("asset_type")
+  customerId       String               @map("customer_id")
+  siteId           String?              @map("site_id")
+  engineerOwnerId  String?              @map("engineer_owner_id")
+  installDate      DateTime?            @map("install_date")
+  warrantyStart    DateTime?            @map("warranty_start")
+  warrantyEnd      DateTime?            @map("warranty_end")
+  vendorId         String?              @map("vendor_id")
+  partNumber       String?              @map("part_number")
+  lifecycleStatus  AssetLifecycleStatus @default(ACTIVE) @map("lifecycle_status")
+  rackLocation     String?              @map("rack_location")
+  ipAddress        String?              @map("ip_address")
+  macAddress       String?              @map("mac_address")
+  firmwareVersion  String?              @map("firmware_version")
+  osVersion        String?              @map("os_version")
+  purchasePrice    Decimal?             @db.Decimal(15, 2) @map("purchase_price")
+  purchaseDate     DateTime?            @map("purchase_date")
+  poNumber         String?              @map("po_number")
+  note             String?
+  qrCodeUrl        String?              @map("qr_code_url")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  deletedAt        DateTime?            @map("deleted_at")
+
+  // Relations
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  site          CustomerSite?   @relation(fields: [siteId], references: [id])
+  engineerOwner User?           @relation("EngineerOwner", fields: [engineerOwnerId], references: [id])
+  vendor        Vendor?         @relation(fields: [vendorId], references: [id])
+  histories     AssetHistory[]
+  attachments   Attachment[]
+  activities    ActivityLog[]
+  tags          AssetTag[]
+
+  @@index([assetCode])
+  @@index([serialNumber])
+  @@index([customerId])
+  @@index([siteId])
+  @@index([assetType])
+  @@index([lifecycleStatus])
+  @@index([warrantyEnd])
+  @@index([deletedAt])
+  @@map("assets")
+}
+
+model AssetHistory {
+  id          String            @id @default(cuid())
+  assetId     String            @map("asset_id")
+  event       AssetHistoryEvent
+  description String
+  performedBy String?           @map("performed_by")  // Engineer name
+  eventDate   DateTime          @map("event_date")
+  oldValue    Json?             @map("old_value")      // Before state
+  newValue    Json?             @map("new_value")      // After state
+  ticketRef   String?           @map("ticket_ref")    // Support ticket
+  note        String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  asset   Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([event])
+  @@index([eventDate])
+  @@map("asset_histories")
+}
+
+// =============================================================
+// LICENSES
+// =============================================================
+
+model License {
+  id             String               @id @default(cuid())
+  licenseName    String               @map("license_name")
+  licenseKey     String?              @map("license_key")     // Encrypted
+  vendor         String?
+  vendorId       String?              @map("vendor_id")
+  product        String?
+  edition        String?
+  quantity       Int?
+  unit           String?              // USERS, DEVICES, CORES, SEATS
+  startDate      DateTime?            @map("start_date")
+  endDate        DateTime?            @map("end_date")
+  customerId     String?              @map("assigned_customer_id")
+  siteId         String?              @map("assigned_site_id")
+  renewalStatus  LicenseRenewalStatus @default(ACTIVE) @map("renewal_status")
+  poNumber       String?              @map("po_number")
+  purchasePrice  Decimal?             @db.Decimal(15, 2) @map("purchase_price")
+  note           String?
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  deletedAt      DateTime?            @map("deleted_at")
+
+  // Relations
+  customer    Customer?      @relation(fields: [customerId], references: [id])
+  site        CustomerSite?  @relation(fields: [siteId], references: [id])
+  vendorRel   Vendor?        @relation(fields: [vendorId], references: [id])
+  attachments Attachment[]
+
+  @@index([customerId])
+  @@index([endDate])
+  @@index([renewalStatus])
+  @@index([deletedAt])
+  @@map("licenses")
+}
+
+// =============================================================
+// ATTACHMENTS (S3-backed)
+// =============================================================
+
+model Attachment {
+  id           String               @id @default(cuid())
+  entityType   AttachmentEntityType @map("entity_type")
+  entityId     String               @map("entity_id")
+  fileName     String               @map("file_name")
+  fileSize     Int                  @map("file_size")       // Bytes
+  mimeType     String               @map("mime_type")
+  s3Key        String               @map("s3_key")
+  s3Bucket     String               @map("s3_bucket")
+  uploadedById String               @map("uploaded_by_id")
+  description  String?
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  // Polymorphic relations (filtered by entityType)
+  customer  Customer?       @relation(fields: [entityId], references: [id], map: "attachment_customer_fk")
+  contract  Contract?       @relation(fields: [entityId], references: [id], map: "attachment_contract_fk")
+  asset     Asset?          @relation(fields: [entityId], references: [id], map: "attachment_asset_fk")
+  license   License?        @relation(fields: [entityId], references: [id], map: "attachment_license_fk")
+  renewal   ContractRenewal? @relation(fields: [entityId], references: [id], map: "attachment_renewal_fk")
+
+  @@index([entityType, entityId])
+  @@index([uploadedById])
+  @@map("attachments")
+}
+
+// =============================================================
+// AUDIT LOGS
+// =============================================================
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  userId      String?     @map("user_id")
+  action      AuditAction
+  entityType  String      @map("entity_type")    // "contract", "asset", etc.
+  entityId    String?     @map("entity_id")
+  oldValues   Json?       @map("old_values")
+  newValues   Json?       @map("new_values")
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")
+  description String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================
+// ACTIVITY LOGS (Per-entity timeline)
+// =============================================================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  action      String                           // Human-readable: "Updated contract status"
+  description String?
+  metadata    Json?                             // Extra context
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User?      @relation(fields: [userId], references: [id])
+  customer  Customer?  @relation(fields: [entityId], references: [id], map: "activity_customer_fk")
+  contract  Contract?  @relation(fields: [entityId], references: [id], map: "activity_contract_fk")
+  asset     Asset?     @relation(fields: [entityId], references: [id], map: "activity_asset_fk")
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// =============================================================
+// NOTIFICATIONS
+// =============================================================
+
+model Notification {
+  id          String             @id @default(cuid())
+  userId      String             @map("user_id")
+  type        NotificationType
+  status      NotificationStatus @default(UNREAD)
+  title       String
+  message     String
+  entityType  String?            @map("entity_type")
+  entityId    String?            @map("entity_id")
+  daysUntil   Int?               @map("days_until")    // Days until expiry
+  readAt      DateTime?          @map("read_at")
+  emailSent   Boolean            @default(false) @map("email_sent")
+  emailSentAt DateTime?          @map("email_sent_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  user  User @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// =============================================================
+// TAGS
+// =============================================================
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6B7280")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  assetTags    AssetTag[]
+  customerTags CustomerTag[]
+
+  @@map("tags")
+}
+
+model AssetTag {
+  assetId String @map("asset_id")
+  tagId   String @map("tag_id")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, tagId])
+  @@map("asset_tags")
+}
+
+model CustomerTag {
+  customerId String @map("customer_id")
+  tagId      String @map("tag_id")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+  @@map("customer_tags")
+}
+
+// =============================================================
+// CONTRACT NUMBER SEQUENCE
+// =============================================================
+
+model ContractSequence {
+  id       String @id @default("singleton")
+  year     Int                               // e.g., 2026
+  sequence Int    @default(0)               // Resets each year
+
+  @@map("contract_sequences")
+}
+
+model RenewalSequence {
+  id       String @id @default("singleton")
+  year     Int
+  sequence Int    @default(0)
+
+  @@map("renewal_sequences")
+}
+
+model AssetSequence {
+  id       String @id @default("singleton")
+  year     Int
+  sequence Int    @default(0)
+
+  @@map("asset_sequences")
+}
