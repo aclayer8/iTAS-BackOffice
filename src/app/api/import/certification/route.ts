@@ -88,12 +88,23 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const sheets  = parseCertificationWorkbook(buffer);
 
-    // ── Get admin user for createdById ───────────────────────────────────────
-    const adminUser = await prisma.user.findFirst({
+    // ── Get or create admin user for createdById ─────────────────────────────
+    let adminUser = await prisma.user.findFirst({
       where: { role: "ADMIN", status: "ACTIVE", deletedAt: null },
     });
     if (!adminUser) {
-      return NextResponse.json({ error: "No admin user found in system" }, { status: 500 });
+      const bcrypt = await import("bcryptjs");
+      adminUser = await prisma.user.upsert({
+        where: { email: "admin@itas.co.th" },
+        update: {},
+        create: {
+          email: "admin@itas.co.th",
+          name: "System Admin",
+          passwordHash: await bcrypt.hash("Admin@1234!", 10),
+          role: "ADMIN",
+          status: "ACTIVE",
+        },
+      });
     }
 
     // ── Process each sheet ───────────────────────────────────────────────────
