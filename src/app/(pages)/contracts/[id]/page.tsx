@@ -33,10 +33,15 @@ const TYPE_COLOR: Record<string, string> = {
 
 export default async function ContractDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
+  const backHref  = from ?? "/contracts";
+  const backLabel = from?.startsWith("/customers") ? "← Customer" : "← Contracts";
 
   const contract = await prisma.contract.findFirst({
     where: { OR: [{ id }, { contractNo: id }], deletedAt: null },
@@ -73,7 +78,7 @@ export default async function ContractDetailPage({
       <div style={{ fontSize: "16px", color: "#6b7280", marginBottom: "20px" }}>
         <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none" }}>Dashboard</Link>
         {" / "}
-        <Link href="/contracts" style={{ color: "#6b7280", textDecoration: "none" }}>Contracts</Link>
+        <Link href={backHref} style={{ color: "#6b7280", textDecoration: "none" }}>{backLabel}</Link>
         {" / "}
         <span style={{ color: "#1E3A5F", fontWeight: 600 }}>{contract.contractNo}</span>
       </div>
@@ -233,7 +238,7 @@ export default async function ContractDetailPage({
 
       {/* Bottom actions */}
       <div style={{ marginTop: "20px", display: "flex", gap: "12px" }}>
-        <Link href="/contracts" style={{
+        <Link href={backHref} style={{
           backgroundColor: "white", color: "#374151", border: "1px solid #e2e8f0",
           padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontSize: "16px", fontWeight: 600,
         }}>

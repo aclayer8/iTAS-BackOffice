@@ -131,7 +131,7 @@ export default async function CustomerDetailPage({
                 return (
                   <tr key={c.id} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
                     <td style={{ padding: "12px 16px", fontWeight: 700, fontFamily: "monospace" }}>
-                      <Link href={`/contracts/${c.id}`} style={{ color: "#2563EB", textDecoration: "none" }}>
+                      <Link href={`/contracts/${c.id}?from=/customers/${customer.id}`} style={{ color: "#2563EB", textDecoration: "none" }}>
                         {c.contractNo}
                       </Link>
                     </td>
