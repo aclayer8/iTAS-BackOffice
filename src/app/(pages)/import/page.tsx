@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, DragEvent } from "react";
+import { useState, useRef, useEffect, DragEvent } from "react";
 import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ interface SheetResult {
   itemsCreated: number;
   notificationsCreated: number;
   message: string;
+  parseErrors?: string[];
 }
 interface ImportResponse {
   success: boolean;
@@ -21,9 +22,110 @@ interface ImportResponse {
   error?: string;
 }
 
-const STATUS_COLOR = { imported: "#059669", skipped: "#f59e0b", error: "#dc2626" };
+const STATUS_COLOR = { imported: "#059669", skipped: "#d97706", error: "#dc2626" };
 const STATUS_BG    = { imported: "#d1fae5", skipped: "#fef3c7", error: "#fee2e2" };
 const STATUS_LABEL = { imported: "✅ นำเข้าแล้ว", skipped: "⏭ ข้ามแล้ว", error: "❌ Error" };
+
+// ─── Animated progress bar ────────────────────────────────────────────────────
+function ProgressBar({ loading }: { loading: boolean }) {
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed]   = useState(0);
+  const startRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!loading) {
+      setProgress(0);
+      setElapsed(0);
+      return;
+    }
+    startRef.current = Date.now();
+    setProgress(0);
+
+    // Tick elapsed seconds
+    const elapsedInterval = setInterval(() => {
+      setElapsed(Math.round((Date.now() - startRef.current) / 1000));
+    }, 500);
+
+    // Simulate progress: fast at start, asymptotically approaches 90%
+    const progressInterval = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 88) return p;
+        const step = (90 - p) * 0.04; // shrinking steps
+        return p + Math.max(step, 0.3);
+      });
+    }, 400);
+
+    return () => {
+      clearInterval(elapsedInterval);
+      clearInterval(progressInterval);
+    };
+  }, [loading]);
+
+  if (!loading) return null;
+
+  const pct = Math.round(progress);
+  const steps = [
+    { label: "อ่านไฟล์ Excel",    done: pct > 5  },
+    { label: "แยก Sheets",         done: pct > 15 },
+    { label: "บันทึก Customer",    done: pct > 35 },
+    { label: "บันทึก Contract",    done: pct > 55 },
+    { label: "บันทึก Assets",      done: pct > 70 },
+    { label: "ตั้ง Notifications", done: pct > 85 },
+  ];
+
+  return (
+    <div style={{
+      backgroundColor: "white",
+      border: "1px solid #e2e8f0",
+      borderRadius: "14px",
+      padding: "24px 28px",
+      marginBottom: "24px",
+      boxShadow: "0 2px 8px rgba(0,0,0,.08)",
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+        <div style={{ fontWeight: 700, color: "#1E3A5F", fontSize: "15px" }}>
+          ⏳ กำลังนำเข้าข้อมูล...
+        </div>
+        <div style={{ fontSize: "13px", color: "#6b7280" }}>
+          ผ่านไปแล้ว {elapsed} วินาที
+        </div>
+      </div>
+
+      {/* Bar */}
+      <div style={{ height: "10px", backgroundColor: "#e2e8f0", borderRadius: "99px", overflow: "hidden", marginBottom: "16px" }}>
+        <div style={{
+          height: "100%",
+          width: `${pct}%`,
+          background: "linear-gradient(90deg, #1E3A5F, #2563eb)",
+          borderRadius: "99px",
+          transition: "width .4s ease",
+        }} />
+      </div>
+
+      {/* Steps */}
+      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+        {steps.map((s) => (
+          <div key={s.label} style={{
+            fontSize: "11px",
+            fontWeight: 600,
+            padding: "3px 10px",
+            borderRadius: "99px",
+            backgroundColor: s.done ? "#d1fae5" : "#f1f5f9",
+            color: s.done ? "#065f46" : "#94a3b8",
+            transition: "all .3s",
+          }}>
+            {s.done ? "✓ " : ""}{s.label}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "14px" }}>
+        กรุณารอจนกว่าระบบจะประมวลผลเสร็จ — อาจใช้เวลา 15–45 วินาที ขึ้นอยู่กับจำนวน Sheets
+      </div>
+    </div>
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function ImportPage() {
@@ -31,6 +133,7 @@ export default function ImportPage() {
   const [dragging, setDragging] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [result,   setResult]   = useState<ImportResponse | null>(null);
+  const [force,    setForce]    = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
@@ -47,6 +150,7 @@ export default function ImportPage() {
 
     const fd = new FormData();
     fd.append("file", file);
+    if (force) fd.append("force", "true");
 
     try {
       const res  = await fetch("/api/import/certification", { method: "POST", body: fd });
@@ -74,9 +178,9 @@ export default function ImportPage() {
       {/* Info banner */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "24px" }}>
         {[
-          { icon: "🏢", title: "Customer", desc: "สร้าง/อัปเดตข้อมูลลูกค้า" },
-          { icon: "📄", title: "Contract", desc: "สร้างสัญญาพร้อม Items" },
-          { icon: "🖥️", title: "Assets", desc: "สร้าง Asset record (มี S/N)" },
+          { icon: "🏢", title: "Customer",   desc: "สร้าง/อัปเดตข้อมูลลูกค้า" },
+          { icon: "📄", title: "Contract",   desc: "สร้างสัญญาพร้อม Items" },
+          { icon: "🖥️", title: "Assets",     desc: "สร้าง Asset record (มี S/N)" },
           { icon: "🔔", title: "แจ้งเตือน", desc: "แจ้งเมื่อสัญญาใกล้หมด 90 วัน" },
         ].map((b) => (
           <div key={b.title} style={{ backgroundColor: "white", borderRadius: "10px", padding: "16px", boxShadow: "0 1px 3px rgba(0,0,0,.08)", display: "flex", gap: "12px", alignItems: "flex-start" }}>
@@ -94,17 +198,18 @@ export default function ImportPage() {
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !loading && inputRef.current?.click()}
         style={{
           border: `2px dashed ${dragging ? "#1E3A5F" : "#cbd5e1"}`,
           borderRadius: "16px",
           padding: "48px 32px",
           textAlign: "center",
           backgroundColor: dragging ? "#eff6ff" : "white",
-          cursor: "pointer",
+          cursor: loading ? "not-allowed" : "pointer",
           transition: "all .2s",
           marginBottom: "20px",
           boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+          opacity: loading ? 0.6 : 1,
         }}
       >
         <input
@@ -119,7 +224,7 @@ export default function ImportPage() {
           <>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#059669" }}>✅ {file.name}</div>
             <div style={{ color: "#6b7280", fontSize: "13px", marginTop: "4px" }}>
-              {(file.size / 1024).toFixed(1)} KB — คลิกเพื่อเปลี่ยนไฟล์
+              {(file.size / 1024).toFixed(1)} KB — {loading ? "กำลังประมวลผล..." : "คลิกเพื่อเปลี่ยนไฟล์"}
             </div>
           </>
         ) : (
@@ -128,10 +233,26 @@ export default function ImportPage() {
               วาง Excel (.xlsx) ที่นี่ หรือคลิกเพื่อเลือกไฟล์
             </div>
             <div style={{ color: "#9ca3af", fontSize: "13px", marginTop: "6px" }}>
-              รองรับไฟล์ Certification of Maintenance Service — นำเข้าได้ทีเดียวทุก sheet
+              รองรับไฟล์ Certification of Maintenance Service — นำเข้าได้ทีเดียวทุก Sheet
             </div>
           </>
         )}
+      </div>
+
+      {/* Options row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "16px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", userSelect: "none" }}>
+          <input
+            type="checkbox"
+            checked={force}
+            onChange={(e) => setForce(e.target.checked)}
+            disabled={loading}
+            style={{ width: "16px", height: "16px", accentColor: "#dc2626", cursor: "pointer" }}
+          />
+          <span style={{ fontSize: "13px", color: "#dc2626", fontWeight: 600 }}>
+            🔄 Force re-import (นำเข้าซ้ำแม้ Contract จะมีอยู่แล้ว)
+          </span>
+        </label>
       </div>
 
       {/* Import Button */}
@@ -150,7 +271,7 @@ export default function ImportPage() {
         </button>
         {file && !loading && (
           <button
-            onClick={() => { setFile(null); setResult(null); }}
+            onClick={() => { setFile(null); setResult(null); setForce(false); }}
             style={{
               backgroundColor: "white", color: "#6b7280", border: "1px solid #e2e8f0",
               padding: "14px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px",
@@ -159,10 +280,10 @@ export default function ImportPage() {
             ล้าง
           </button>
         )}
-        {loading && (
-          <span style={{ color: "#6b7280", fontSize: "13px" }}>กำลังประมวลผลทุก sheet อาจใช้เวลา 10-30 วินาที...</span>
-        )}
       </div>
+
+      {/* Progress bar */}
+      <ProgressBar loading={loading} />
 
       {/* Error */}
       {result && !result.success && (
@@ -178,85 +299,4 @@ export default function ImportPage() {
           {[
             { label: "ทั้งหมด",    value: result.summary.total,    color: "#1E3A5F", bg: "#eff6ff" },
             { label: "นำเข้าแล้ว", value: result.summary.imported, color: "#059669", bg: "#d1fae5" },
-            { label: "ข้ามแล้ว",   value: result.summary.skipped,  color: "#d97706", bg: "#fef3c7" },
-            { label: "Error",      value: result.summary.errors,   color: "#dc2626", bg: "#fee2e2" },
-          ].map((s) => (
-            <div key={s.label} style={{ backgroundColor: s.bg, borderRadius: "10px", padding: "16px 20px", textAlign: "center" }}>
-              <div style={{ fontSize: "28px", fontWeight: 800, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: "13px", color: s.color, fontWeight: 600 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Results Table */}
-      {result?.success && result.results && (
-        <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 4px rgba(0,0,0,.08)", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-            <thead>
-              <tr style={{ backgroundColor: "#1E3A5F", color: "white" }}>
-                {["Sheet / Contract No.", "ลูกค้า", "Items", "Assets ใหม่", "Notifications", "สถานะ", "รายละเอียด"].map((h) => (
-                  <th key={h} style={{ padding: "11px 14px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {result.results.map((r, i) => (
-                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "11px 14px" }}>
-                    <div style={{ fontWeight: 700, color: "#2563EB", fontFamily: "monospace", fontSize: "12px" }}>{r.contractNo || "—"}</div>
-                    <div style={{ color: "#9ca3af", fontSize: "11px", marginTop: "2px" }}>{r.sheetName}</div>
-                  </td>
-                  <td style={{ padding: "11px 14px", fontWeight: 600 }}>{r.customerName ?? "—"}</td>
-                  <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                    <span style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>
-                      {r.itemsCreated}
-                    </span>
-                  </td>
-                  <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                    <span style={{ backgroundColor: "#d1fae5", color: "#065f46", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>
-                      {r.assetsCreated}
-                    </span>
-                  </td>
-                  <td style={{ padding: "11px 14px", textAlign: "center", color: "#6b7280" }}>
-                    {r.notificationsCreated > 0 ? `🔔 ${r.notificationsCreated}` : "—"}
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <span style={{
-                      backgroundColor: STATUS_BG[r.status],
-                      color: STATUS_COLOR[r.status],
-                      padding: "3px 10px", borderRadius: "99px", fontSize: "12px", fontWeight: 700,
-                    }}>
-                      {STATUS_LABEL[r.status]}
-                    </span>
-                  </td>
-                  <td style={{ padding: "11px 14px", color: "#6b7280", fontSize: "12px", maxWidth: "280px" }}>
-                    <span title={r.message}>{r.message.length > 60 ? r.message.slice(0, 60) + "..." : r.message}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Success action */}
-      {result?.success && result.summary && result.summary.imported > 0 && (
-        <div style={{ marginTop: "20px", display: "flex", gap: "12px" }}>
-          <Link href="/assets" style={{
-            backgroundColor: "#7c3aed", color: "white", padding: "10px 24px",
-            borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600,
-          }}>
-            🖥️ ดู Assets ที่นำเข้า
-          </Link>
-          <Link href="/contracts" style={{
-            backgroundColor: "#1E3A5F", color: "white", padding: "10px 24px",
-            borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600,
-          }}>
-            📄 ดู Contracts ที่นำเข้า
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}
+            { label: "ข้ามแล้ว",   value: resul

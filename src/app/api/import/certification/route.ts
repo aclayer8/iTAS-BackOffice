@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    const forceReimport = formData.get("force") === "true";
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const sheets  = parseCertificationWorkbook(buffer);
 
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest) {
         itemsCreated: number;
         notificationsCreated: number;
         message: string;
+        parseErrors?: string[];
       } = {
         sheetName: sheet.sheetName,
         contractNo: sheet.contractNo,
@@ -130,6 +133,7 @@ export async function POST(request: NextRequest) {
         itemsCreated: 0,
         notificationsCreated: 0,
         message: "",
+        parseErrors: sheet.parseErrors.length > 0 ? sheet.parseErrors : undefined,
       };
 
       try {
@@ -145,11 +149,17 @@ export async function POST(request: NextRequest) {
           where: { contractNo: sheet.contractNo },
         });
         if (existingContract) {
-          result.status = "skipped";
-          result.contractId = existingContract.id;
-          result.message = `Contract ${sheet.contractNo} already exists — skipped`;
-          results.push(result);
-          continue;
+          if (!forceReimport) {
+            result.status = "skipped";
+            result.contractId = existingContract.id;
+            result.message = `Contract ${sheet.contractNo} มีอยู่แล้ว — ข้าม (ใช้ Force Re-import เพื่อนำเข้าซ้ำ)`;
+            results.push(result);
+            continue;
+          }
+          // Force: delete existing contract items first so we can re-create
+          await prisma.contractItem.deleteMany({ where: { contractId: existingContract.id } });
+          await prisma.notification.deleteMany({ where: { entityId: existingContract.id } });
+          await prisma.contract.delete({ where: { id: existingContract.id } });
         }
 
         // ── Upsert Customer ──────────────────────────────────────────────────
@@ -359,24 +369,4 @@ export async function POST(request: NextRequest) {
         result.status  = "imported";
         result.message = `นำเข้าสำเร็จ — ${itemsCreated} items, ${assetsCreated} assets ใหม่${notifCount > 0 ? `, ${notifCount} notifications` : ""}`;
 
-      } catch (sheetErr) {
-        result.status  = "error";
-        result.message = `Error: ${String(sheetErr)}`;
-      }
-
-      results.push(result);
-    }
-
-    const summary = {
-      total:    results.length,
-      imported: results.filter((r) => r.status === "imported").length,
-      skipped:  results.filter((r) => r.status === "skipped").length,
-      errors:   results.filter((r) => r.status === "error").length,
-    };
-
-    return NextResponse.json({ success: true, summary, results });
-  } catch (err) {
-    console.error("[import/certification] Fatal error:", err);
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
-  }
-}
+   
