@@ -58,11 +58,11 @@ export default async function ContractsPage({
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div>
-          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Dashboard</Link>
-          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>Contract Management</h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{contracts.length} contracts</p>
+          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "16px" }}>&larr; Dashboard</Link>
+          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "26px" }}>Contract Management</h1>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "16px" }}>{contracts.length} contracts</p>
         </div>
-        <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>
+        <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
           + New Contract
         </button>
       </div>
@@ -81,13 +81,13 @@ export default async function ContractsPage({
           const href = `/contracts?sort=${col}&order=${order}${tab.value ? `&status=${tab.value}` : ""}`;
           return (
             <Link key={tab.value} href={href} style={{
-              padding: "6px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 600,
+              padding: "6px 14px", borderRadius: "99px", fontSize: "15px", fontWeight: 600,
               textDecoration: "none",
               backgroundColor: active ? "#1E3A5F" : "white",
               color: active ? "white" : "#6b7280",
               border: `1px solid ${active ? "#1E3A5F" : "#e2e8f0"}`,
             }}>
-              {tab.label} {tab.value !== "" && <span style={{ opacity: .7, fontSize: "11px" }}>({cnt})</span>}
+              {tab.label} {tab.value !== "" && <span style={{ opacity: .7, fontSize: "13px" }}>({cnt})</span>}
             </Link>
           );
         })}
@@ -95,7 +95,7 @@ export default async function ContractsPage({
 
       {/* Table */}
       <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "16px" }}>
           <thead>
             <tr style={{ backgroundColor: "#1E3A5F", color: "white" }}>
               {[
@@ -128,7 +128,7 @@ export default async function ContractsPage({
                       opacity: isActive ? 1 : 0.85,
                     }}>
                       {label}
-                      <span style={{ fontSize: "12px", opacity: isActive ? 1 : 0.5 }}>{arrow}</span>
+                      <span style={{ fontSize: "14px", opacity: isActive ? 1 : 0.5 }}>{arrow}</span>
                     </Link>
                   </th>
                 );
@@ -147,19 +147,19 @@ export default async function ContractsPage({
                     </Link>
                   </td>
                   <td style={{ padding: "12px 16px", fontWeight: 600 }}>{c.customer.companyName}</td>
-                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.site?.siteName ?? "—"}</td>
-                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.vendor?.name ?? "—"}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "12px" }}>{c.slaType.replace(/_/g, " ")}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "13px" }}>{c.startDate.toLocaleDateString("en-GB")}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "13px" }}>{c.endDate.toLocaleDateString("en-GB")}</td>
+                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "15px" }}>{c.site?.siteName ?? "—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "15px" }}>{c.vendor?.name ?? "—"}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>{c.slaType.replace(/_/g, " ")}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "15px" }}>{c.startDate.toLocaleDateString("en-GB")}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "15px" }}>{c.endDate.toLocaleDateString("en-GB")}</td>
                   <td style={{ padding: "12px 16px" }}>
-                    <span style={{ color: dayColor, fontWeight: "bold", fontSize: "13px" }}>
+                    <span style={{ color: dayColor, fontWeight: "bold", fontSize: "15px" }}>
                       {days < 0 ? `${Math.abs(days)}d ago` : `${days}d`}
                     </span>
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "center" }}>{c._count.items}</td>
                   <td style={{ padding: "12px 16px" }}>
-                    <span style={{ backgroundColor: STATUS_COLOR[c.status] + "20", color: STATUS_COLOR[c.status], padding: "2px 10px", borderRadius: "99px", fontSize: "12px", fontWeight: "bold" }}>
+                    <span style={{ backgroundColor: STATUS_COLOR[c.status] + "20", color: STATUS_COLOR[c.status], padding: "2px 10px", borderRadius: "99px", fontSize: "14px", fontWeight: "bold" }}>
                       {c.status}
                     </span>
                   </td>

@@ -95,11 +95,11 @@ export default async function AssetsPage({
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div>
-          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>← Dashboard</Link>
-          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>🖥️ Asset Tracking</h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{assets.length} assets</p>
+          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "16px" }}>← Dashboard</Link>
+          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "26px" }}>🖥️ Asset Tracking</h1>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "16px" }}>{assets.length} assets</p>
         </div>
-        <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>
+        <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
           + New Asset
         </button>
       </div>
@@ -108,17 +108,17 @@ export default async function AssetsPage({
       {(expiring30 > 0 || expiring90 > 0 || expired > 0) && (
         <div style={{ display: "flex", gap: "10px", marginBottom: "14px", flexWrap: "wrap" }}>
           {expired > 0 && (
-            <span style={{ backgroundColor: "#fee2e2", color: "#dc2626", padding: "5px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 700 }}>
+            <span style={{ backgroundColor: "#fee2e2", color: "#dc2626", padding: "5px 14px", borderRadius: "99px", fontSize: "15px", fontWeight: 700 }}>
               🔴 หมดประกันแล้ว {expired} รายการ
             </span>
           )}
           {expiring30 > 0 && (
-            <span style={{ backgroundColor: "#ffedd5", color: "#ea580c", padding: "5px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 700 }}>
+            <span style={{ backgroundColor: "#ffedd5", color: "#ea580c", padding: "5px 14px", borderRadius: "99px", fontSize: "15px", fontWeight: 700 }}>
               🟠 หมดใน 30 วัน {expiring30} รายการ
             </span>
           )}
           {expiring90 > 0 && (
-            <span style={{ backgroundColor: "#fef9c3", color: "#b45309", padding: "5px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 700 }}>
+            <span style={{ backgroundColor: "#fef9c3", color: "#b45309", padding: "5px 14px", borderRadius: "99px", fontSize: "15px", fontWeight: 700 }}>
               🟡 หมดใน 90 วัน {expiring90} รายการ
             </span>
           )}
@@ -140,13 +140,13 @@ export default async function AssetsPage({
           const href = filterLink(tab.value ? `status=${tab.value}` : "");
           return (
             <Link key={tab.value} href={href} style={{
-              padding: "5px 13px", borderRadius: "99px", fontSize: "12px", fontWeight: 600,
+              padding: "5px 13px", borderRadius: "99px", fontSize: "14px", fontWeight: 600,
               textDecoration: "none",
               backgroundColor: active ? "#1E3A5F" : "white",
               color: active ? "white" : "#6b7280",
               border: `1px solid ${active ? "#1E3A5F" : "#e2e8f0"}`,
             }}>
-              {tab.label} <span style={{ opacity: .65, fontSize: "11px" }}>({cnt})</span>
+              {tab.label} <span style={{ opacity: .65, fontSize: "13px" }}>({cnt})</span>
             </Link>
           );
         })}
@@ -168,7 +168,7 @@ export default async function AssetsPage({
           const href = filterLink(`${status ? `status=${status}&` : ""}${tab.value ? `type=${tab.value}` : ""}`);
           return (
             <Link key={tab.value} href={href} style={{
-              padding: "5px 13px", borderRadius: "99px", fontSize: "12px", fontWeight: 600,
+              padding: "5px 13px", borderRadius: "99px", fontSize: "14px", fontWeight: 600,
               textDecoration: "none",
               backgroundColor: active ? "#7c3aed" : "white",
               color: active ? "white" : "#6b7280",
@@ -182,7 +182,7 @@ export default async function AssetsPage({
 
       {/* Table */}
       <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "16px" }}>
           <thead>
             <tr style={{ backgroundColor: "#1E3A5F", color: "white" }}>
               {COLUMNS.map(({ label, key }) => {
@@ -206,7 +206,7 @@ export default async function AssetsPage({
                       opacity: actuallyActive ? 1 : 0.85,
                     }}>
                       {label}
-                      <span style={{ fontSize: "11px", opacity: actuallyActive ? 1 : 0.45 }}>{arrow}</span>
+                      <span style={{ fontSize: "13px", opacity: actuallyActive ? 1 : 0.45 }}>{arrow}</span>
                     </Link>
                   </th>
                 );
@@ -224,18 +224,18 @@ export default async function AssetsPage({
               return (
                 <tr key={a.id} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
                   {/* Type */}
-                  <td style={{ padding: "12px 16px", fontSize: "20px" }}>{TYPE_ICON[a.assetType] ?? "📦"}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "22px" }}>{TYPE_ICON[a.assetType] ?? "📦"}</td>
                   {/* Asset Code */}
-                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "#2563EB", fontFamily: "monospace", fontSize: "13px" }}>
+                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "#2563EB", fontFamily: "monospace", fontSize: "15px" }}>
                     {a.assetCode}
                   </td>
                   {/* Brand / Model */}
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 600 }}>{a.brand}</div>
-                    <div style={{ color: "#6b7280", fontSize: "12px" }}>{a.model}</div>
+                    <div style={{ color: "#6b7280", fontSize: "14px" }}>{a.model}</div>
                   </td>
                   {/* Serial No. */}
-                  <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "12px" }}>
+                  <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "14px" }}>
                     {a.serialNumber
                       ? <span style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", padding: "2px 6px", borderRadius: "4px" }}>{a.serialNumber}</span>
                       : <span style={{ color: "#d1d5db" }}>N/A</span>}
@@ -243,17 +243,17 @@ export default async function AssetsPage({
                   {/* Customer */}
                   <td style={{ padding: "12px 16px", fontWeight: 600 }}>{a.customer.companyName}</td>
                   {/* Site */}
-                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{a.site?.siteName ?? "—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "15px" }}>{a.site?.siteName ?? "—"}</td>
                   {/* Rack */}
-                  <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "12px", color: "#6b7280" }}>{a.rackLocation ?? "—"}</td>
+                  <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "14px", color: "#6b7280" }}>{a.rackLocation ?? "—"}</td>
                   {/* Warranty End */}
-                  <td style={{ padding: "12px 16px", fontSize: "13px" }}>
+                  <td style={{ padding: "12px 16px", fontSize: "15px" }}>
                     {a.warrantyEnd ? a.warrantyEnd.toLocaleDateString("en-GB") : <span style={{ color: "#d1d5db" }}>—</span>}
                   </td>
                   {/* Days Left */}
                   <td style={{ padding: "12px 16px" }}>
                     <span style={{
-                      color: wColor, fontWeight: "bold", fontSize: "13px",
+                      color: wColor, fontWeight: "bold", fontSize: "15px",
                       ...(days !== null && days <= 90 && days >= 0 ? {
                         backgroundColor: wColor + "18", padding: "2px 8px", borderRadius: "99px"
                       } : {}),
@@ -268,7 +268,7 @@ export default async function AssetsPage({
                     <span style={{
                       backgroundColor: (STATUS_COLOR[a.lifecycleStatus] ?? "#9ca3af") + "20",
                       color: STATUS_COLOR[a.lifecycleStatus] ?? "#9ca3af",
-                      padding: "2px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: "bold",
+                      padding: "2px 10px", borderRadius: "99px", fontSize: "13px", fontWeight: "bold",
                     }}>
                       {a.lifecycleStatus.replace(/_/g, " ")}
                     </span>
