@@ -4,18 +4,25 @@ import Image from "next/image";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [activeContracts, totalAssets, totalCustomers, expiringAssets, expiringContracts] =
+  const now = new Date();
+  const in90 = new Date(Date.now() + 90*86400000);
+
+  const [activeContracts, totalAssets, totalCustomers, expiringAssets, expiringContractsList] =
     await Promise.all([
       prisma.contract.count({ where: { status: "ACTIVE", deletedAt: null } }),
       prisma.asset.count({ where: { deletedAt: null } }),
       prisma.customer.count({ where: { status: "ACTIVE", deletedAt: null } }),
       prisma.asset.count({
-        where: { deletedAt: null, warrantyEnd: { gte: new Date(), lte: new Date(Date.now() + 90*86400000) } },
+        where: { deletedAt: null, warrantyEnd: { gte: now, lte: in90 } },
       }),
-      prisma.contract.count({
-        where: { deletedAt: null, status: "ACTIVE", endDate: { gte: new Date(), lte: new Date(Date.now() + 90*86400000) } },
+      prisma.contract.findMany({
+        where: { deletedAt: null, status: "ACTIVE", endDate: { gte: now, lte: in90 } },
+        orderBy: { endDate: "asc" },
+        include: { customer: { select: { companyName: true } } },
       }),
     ]);
+
+  const expiringContracts = expiringContractsList.length;
 
   const today = new Date().toLocaleDateString("th-TH", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
@@ -180,14 +187,26 @@ export default async function DashboardPage() {
             <div className="page-title">Dashboard Overview</div>
             <div className="page-date">{today}</div>
 
-            {expiringContracts > 0 && (
-              <div className="alert">
-                <span style={{fontSize:22}}>⚠️</span>
-                <div style={{flex:1}}>
-                  <div className="alert-title">มีสัญญา {expiringContracts} รายการที่จะหมดอายุภายใน 90 วัน</div>
-                  <div className="alert-sub">ควรติดต่อลูกค้าเพื่อต่ออายุสัญญาก่อนหมดอายุ</div>
-                </div>
-                <a href="/contracts" className="alert-btn">ดูสัญญา</a>
+            {expiringContractsList.length > 0 && (
+              <div style={{marginBottom:"24px"}}>
+                {expiringContractsList.map((ec) => {
+                  const daysLeft = Math.ceil((ec.endDate.getTime() - Date.now()) / 86400000);
+                  return (
+                    <div key={ec.id} className="alert" style={{marginBottom:"8px"}}>
+                      <span style={{fontSize:22}}>⚠️</span>
+                      <div style={{flex:1}}>
+                        <div className="alert-title">
+                          {ec.contractNo} — {ec.customer.companyName}
+                        </div>
+                        <div className="alert-sub">
+                          {ec.serviceDesc ? ec.serviceDesc.slice(0,60) + (ec.serviceDesc.length > 60 ? "…" : "") : ""}
+                          {" "}เหลือ {daysLeft} วัน ({ec.endDate.toLocaleDateString("th-TH")})
+                        </div>
+                      </div>
+                      <a href={`/contracts/${ec.id}`} className="alert-btn">ดูสัญญา</a>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
