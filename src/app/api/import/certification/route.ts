@@ -65,9 +65,12 @@ function extractBrand(desc: string, partNo: string): string {
 }
 
 function extractModel(desc: string, partNo: string): string {
-  const match = desc.match(/^([A-Z0-9][A-Z0-9\-/]{2,})/i);
+  // partNo is the most reliable model identifier (e.g. AIR-CAP2702I-A-K9, WS-C2960X-48FPD-L)
+  if (partNo && partNo.trim().length > 2) return partNo.trim().slice(0, 80);
+  // fallback: extract first meaningful token from description
+  const match = desc.match(/^([A-Z0-9][A-Z0-9\-/]{4,})/i);
   if (match) return match[1];
-  return partNo || desc.split(",")[0].trim().slice(0, 60);
+  return desc.split(",")[0].trim().slice(0, 60);
 }
 
 // suppress unused import warning

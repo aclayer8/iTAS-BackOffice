@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import EditBrandModel from "./EditBrandModel";
 
 export const dynamic = "force-dynamic";
 
@@ -231,8 +232,7 @@ export default async function AssetsPage({
                   </td>
                   {/* Brand / Model */}
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontWeight: 600 }}>{a.brand}</div>
-                    <div style={{ color: "#6b7280", fontSize: "12px" }}>{a.model}</div>
+                    <EditBrandModel assetId={a.id} brand={a.brand} model={a.model} />
                   </td>
                   {/* Serial No. */}
                   <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "12px" }}>
