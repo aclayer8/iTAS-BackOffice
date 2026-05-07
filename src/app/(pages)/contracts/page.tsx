@@ -144,7 +144,11 @@ export default async function ContractsPage({
               const dayColor = days < 0 ? "#ef4444" : days <= 30 ? "#f97316" : days <= 90 ? "#f59e0b" : "#10b981";
               return (
                 <tr key={c.id} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "#2563EB", fontFamily: "monospace" }}>{c.contractNo}</td>
+                  <td style={{ padding: "12px 16px", fontWeight: 700, fontFamily: "monospace" }}>
+                    <Link href={`/contracts/${c.id}`} style={{ color: "#2563EB", textDecoration: "none" }}>
+                      {c.contractNo}
+                    </Link>
+                  </td>
                   <td style={{ padding: "12px 16px", fontWeight: 600 }}>{c.customer.companyName}</td>
                   <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.site?.siteName ?? "—"}</td>
                   <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.vendor?.name ?? "—"}</td>
@@ -168,13 +172,4 @@ export default async function ContractsPage({
             {contracts.length === 0 && (
               <tr>
                 <td colSpan={10} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
-                  ไม่พบข้อมูล Contract
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+                  ไม�
