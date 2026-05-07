@@ -26,8 +26,8 @@ export default async function ContractsPage({
   searchParams: Promise<{ sort?: string; order?: string; status?: string }>;
 }) {
   const params = await searchParams;
-  const col    = (params.sort  ?? "endDate")  as SortCol;
-  const order  = (params.order ?? "asc")      as SortOrder;
+  const col    = (params.sort  ?? "contractNo") as SortCol;
+  const order  = (params.order ?? "desc")      as SortOrder;
   const status = params.status ?? "";
 
   const contracts = await prisma.contract.findMany({
@@ -178,4 +178,3 @@ export default async function ContractsPage({
       </div>
     </div>
   );
-}
