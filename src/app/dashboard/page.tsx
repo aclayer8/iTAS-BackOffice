@@ -104,14 +104,14 @@ export default async function DashboardPage() {
     .kpi-bar{position:absolute;bottom:0;left:0;right:0;height:3px}
     .two-col{display:grid;grid-template-columns:1fr 360px;gap:22px}
     .card{background:white;border:1.5px solid #E2E8F0;border-radius:14px;padding:24px}
-    .card-title{font-size:16px;font-weight:700;color:#0F172A;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
-    .card-badge{font-size:11px;font-weight:600;padding:2px 10px;border-radius:99px;background:#F1F5F9;color:#64748B}
-    .ql-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-    .ql-item{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:10px;border:1.5px solid #F1F5F9;background:#FAFAFA;text-decoration:none;transition:border-color .15s,background .15s,transform .15s}
+    .card-title{font-size:18px;font-weight:700;color:#0F172A;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+    .card-badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:99px;background:#F1F5F9;color:#64748B}
+    .ql-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .ql-item{display:flex;align-items:center;gap:14px;padding:16px 16px;border-radius:10px;border:1.5px solid #F1F5F9;background:#FAFAFA;text-decoration:none;transition:border-color .15s,background .15s,transform .15s}
     .ql-item:hover{border-color:#CBD5E1;background:white;transform:translateX(2px);box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-    .ql-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-    .ql-name{font-size:13px;font-weight:600;color:#1E293B}
-    .ql-desc{font-size:11px;color:#94A3B8;margin-top:1px}
+    .ql-icon{width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .ql-name{font-size:16px;font-weight:600;color:#1E293B}
+    .ql-desc{font-size:13px;color:#94A3B8;margin-top:2px}
     .status-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #F1F5F9}
     .status-row:last-child{border-bottom:none;padding-bottom:0}
     .s-left{display:flex;align-items:center;gap:10px}
