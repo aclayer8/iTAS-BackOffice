@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #0F172A;
-  --foreground: #E2E8F0;
+  --background: #F1F5F9;
+  --foreground: #1E293B;
 }
 
 *, *::before, *::after {
@@ -14,4 +14,8 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #0F172A
+  background: #F1F5F9;
+  color: var(--foreground);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
