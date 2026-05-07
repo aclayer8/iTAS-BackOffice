@@ -41,16 +41,14 @@ function ProgressBar({ loading }: { loading: boolean }) {
     startRef.current = Date.now();
     setProgress(0);
 
-    // Tick elapsed seconds
     const elapsedInterval = setInterval(() => {
       setElapsed(Math.round((Date.now() - startRef.current) / 1000));
     }, 500);
 
-    // Simulate progress: fast at start, asymptotically approaches 90%
     const progressInterval = setInterval(() => {
       setProgress((p) => {
         if (p >= 88) return p;
-        const step = (90 - p) * 0.04; // shrinking steps
+        const step = (90 - p) * 0.04;
         return p + Math.max(step, 0.3);
       });
     }, 400);
@@ -82,7 +80,6 @@ function ProgressBar({ loading }: { loading: boolean }) {
       marginBottom: "24px",
       boxShadow: "0 2px 8px rgba(0,0,0,.08)",
     }}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
         <div style={{ fontWeight: 700, color: "#1E3A5F", fontSize: "15px" }}>
           ⏳ กำลังนำเข้าข้อมูล...
@@ -92,7 +89,6 @@ function ProgressBar({ loading }: { loading: boolean }) {
         </div>
       </div>
 
-      {/* Bar */}
       <div style={{ height: "10px", backgroundColor: "#e2e8f0", borderRadius: "99px", overflow: "hidden", marginBottom: "16px" }}>
         <div style={{
           height: "100%",
@@ -103,7 +99,6 @@ function ProgressBar({ loading }: { loading: boolean }) {
         }} />
       </div>
 
-      {/* Steps */}
       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
         {steps.map((s) => (
           <div key={s.label} style={{
@@ -121,7 +116,7 @@ function ProgressBar({ loading }: { loading: boolean }) {
       </div>
 
       <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "14px" }}>
-        กรุณารอจนกว่าระบบจะประมวลผลเสร็จ — อาจใช้เวลา 15–45 วินาที ขึ้นอยู่กับจำนวน Sheets
+        กรุณารอจนกว่าระบบจะประมวลผลเสร็จ — อาจใช้เวลา 15-45 วินาที ขึ้นอยู่กับจำนวน Sheets
       </div>
     </div>
   );
@@ -166,7 +161,6 @@ export default function ImportPage() {
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
 
-      {/* Header */}
       <div style={{ marginBottom: "24px" }}>
         <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>← Dashboard</Link>
         <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>📥 Import Certification Form</h1>
@@ -175,7 +169,6 @@ export default function ImportPage() {
         </p>
       </div>
 
-      {/* Info banner */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "24px" }}>
         {[
           { icon: "🏢", title: "Customer",   desc: "สร้าง/อัปเดตข้อมูลลูกค้า" },
@@ -193,7 +186,6 @@ export default function ImportPage() {
         ))}
       </div>
 
-      {/* Drop Zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
@@ -239,7 +231,6 @@ export default function ImportPage() {
         )}
       </div>
 
-      {/* Options row */}
       <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "16px" }}>
         <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", userSelect: "none" }}>
           <input
@@ -255,7 +246,6 @@ export default function ImportPage() {
         </label>
       </div>
 
-      {/* Import Button */}
       <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "28px" }}>
         <button
           onClick={handleImport}
@@ -282,10 +272,8 @@ export default function ImportPage() {
         )}
       </div>
 
-      {/* Progress bar */}
       <ProgressBar loading={loading} />
 
-      {/* Error */}
       {result && !result.success && (
         <div style={{ backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "10px", padding: "16px 20px", marginBottom: "20px" }}>
           <div style={{ color: "#dc2626", fontWeight: 700 }}>❌ เกิดข้อผิดพลาด</div>
@@ -293,10 +281,93 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* Summary */}
       {result?.success && result.summary && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "24px" }}>
           {[
             { label: "ทั้งหมด",    value: result.summary.total,    color: "#1E3A5F", bg: "#eff6ff" },
             { label: "นำเข้าแล้ว", value: result.summary.imported, color: "#059669", bg: "#d1fae5" },
-            { label: "ข้ามแล้ว",   value: resul
+            { label: "ข้ามแล้ว",   value: result.summary.skipped,  color: "#d97706", bg: "#fef3c7" },
+            { label: "Error",      value: result.summary.errors,   color: "#dc2626", bg: "#fee2e2" },
+          ].map((s) => (
+            <div key={s.label} style={{ backgroundColor: s.bg, borderRadius: "10px", padding: "16px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "28px", fontWeight: 800, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: "13px", color: s.color, fontWeight: 600 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result?.success && result.results && (
+        <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 4px rgba(0,0,0,.08)", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#1E3A5F", color: "white" }}>
+                {["Sheet / Contract No.", "ลูกค้า", "Items", "Assets ใหม่", "Notifications", "สถานะ", "รายละเอียด"].map((h) => (
+                  <th key={h} style={{ padding: "11px 14px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {result.results.map((r, i) => (
+                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "11px 14px" }}>
+                    <div style={{ fontWeight: 700, color: "#2563EB", fontFamily: "monospace", fontSize: "12px" }}>{r.contractNo || "—"}</div>
+                    <div style={{ color: "#9ca3af", fontSize: "11px", marginTop: "2px" }}>{r.sheetName}</div>
+                  </td>
+                  <td style={{ padding: "11px 14px", fontWeight: 600 }}>{r.customerName ?? "—"}</td>
+                  <td style={{ padding: "11px 14px", textAlign: "center" }}>
+                    <span style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>
+                      {r.itemsCreated}
+                    </span>
+                  </td>
+                  <td style={{ padding: "11px 14px", textAlign: "center" }}>
+                    <span style={{ backgroundColor: "#d1fae5", color: "#065f46", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>
+                      {r.assetsCreated}
+                    </span>
+                  </td>
+                  <td style={{ padding: "11px 14px", textAlign: "center", color: "#6b7280" }}>
+                    {r.notificationsCreated > 0 ? `🔔 ${r.notificationsCreated}` : "—"}
+                  </td>
+                  <td style={{ padding: "11px 14px" }}>
+                    <span style={{
+                      backgroundColor: STATUS_BG[r.status],
+                      color: STATUS_COLOR[r.status],
+                      padding: "3px 10px", borderRadius: "99px", fontSize: "12px", fontWeight: 700,
+                    }}>
+                      {STATUS_LABEL[r.status]}
+                    </span>
+                  </td>
+                  <td style={{ padding: "11px 14px", color: "#6b7280", fontSize: "12px", maxWidth: "280px" }}>
+                    <div title={r.message}>{r.message.length > 80 ? r.message.slice(0, 80) + "..." : r.message}</div>
+                    {r.parseErrors && r.parseErrors.length > 0 && (
+                      <div style={{ marginTop: "4px", color: "#dc2626", fontSize: "11px" }}>
+                        ⚠️ Parse: {r.parseErrors.join("; ")}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {result?.success && result.summary && result.summary.imported > 0 && (
+        <div style={{ marginTop: "20px", display: "flex", gap: "12px" }}>
+          <Link href="/assets" style={{
+            backgroundColor: "#7c3aed", color: "white", padding: "10px 24px",
+            borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600,
+          }}>
+            🖥️ ดู Assets ที่นำเข้า
+          </Link>
+          <Link href="/contracts" style={{
+            backgroundColor: "#1E3A5F", color: "white", padding: "10px 24px",
+            borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600,
+          }}>
+            📄 ดู Contracts ที่นำเข้า
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}

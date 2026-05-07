@@ -1,6 +1,6 @@
 // =============================================================
 // POST /api/import/certification
-// Accepts Excel Certification Form → imports to DB
+// Accepts Excel Certification Form -> imports to DB
 // Creates: Customer, Contract, ContractItems, Assets, Notifications
 // =============================================================
 
@@ -12,7 +12,7 @@ import { generateAssetCode } from "@/lib/contract-number";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// ─── SLA mapping: Excel string → Prisma enum ────────────────────────────────
+// --- SLA mapping: Excel string -> Prisma enum ---
 type SlaType =
   | "ONSITE_NBD" | "ONSITE_4HR" | "REMOTE_NBD" | "REMOTE_4HR"
   | "BEST_EFFORT" | "CUSTOM";
@@ -29,7 +29,7 @@ function mapSla(sla: string): SlaType {
   return "CUSTOM";
 }
 
-// ─── Asset type detection from description + part number ─────────────────────
+// --- Asset type detection from description + part number ---
 type AssetType =
   | "FIREWALL" | "SWITCH" | "WIRELESS_AP" | "SERVER" | "STORAGE"
   | "UPS" | "ROUTER" | "LOAD_BALANCER" | "OTHER";
@@ -47,7 +47,7 @@ function detectAssetType(desc: string, partNo: string): AssetType {
   return "OTHER";
 }
 
-// ─── Extract brand from description / part number ────────────────────────────
+// --- Extract brand from description / part number ---
 function extractBrand(desc: string, partNo: string): string {
   const t = (desc + " " + partNo).toLowerCase();
   if (t.includes("palo alto") || /^pan-/.test(partNo.toLowerCase())) return "Palo Alto Networks";
@@ -66,19 +66,19 @@ function extractBrand(desc: string, partNo: string): string {
   return "Unknown";
 }
 
-// ─── Extract model from description ──────────────────────────────────────────
+// --- Extract model from description ---
 function extractModel(desc: string, partNo: string): string {
-  // Try to pull the first model-looking token from description
-  // e.g. "PA-440, GlobalProtect..." → "PA-440"
   const match = desc.match(/^([A-Z0-9][A-Z0-9\-/]{2,})/i);
   if (match) return match[1];
   return partNo || desc.split(",")[0].trim().slice(0, 60);
 }
 
-// ─── Main handler ─────────────────────────────────────────────────────────────
+// --- Suppress unused import warning ---
+type _ParsedItemType = ParsedItem;
+
+// --- Main handler ---
 export async function POST(request: NextRequest) {
   try {
-    // ── Parse file from multipart ────────────────────────────────────────────
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     if (!file) {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const sheets  = parseCertificationWorkbook(buffer);
 
-    // ── Get or create admin user for createdById ─────────────────────────────
+    // Get or create admin user for createdById
     let adminUser = await prisma.user.findFirst({
       where: { role: "ADMIN", status: "ACTIVE", deletedAt: null },
     });
@@ -109,7 +109,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ── Process each sheet ───────────────────────────────────────────────────
     const results = [];
 
     for (const sheet of sheets) {
@@ -139,12 +138,12 @@ export async function POST(request: NextRequest) {
       try {
         if (!sheet.contractNo || !sheet.customer.name) {
           result.status = "skipped";
-          result.message = `Skipped — missing contractNo or customer name. Parse errors: ${sheet.parseErrors.join(", ")}`;
+          result.message = `Skipped: missing contractNo="${sheet.contractNo}" or customer="${sheet.customer.name}". Parse errors: ${sheet.parseErrors.join(", ") || "none"}`;
           results.push(result);
           continue;
         }
 
-        // ── Check if contract already imported ───────────────────────────────
+        // Check if contract already imported
         const existingContract = await prisma.contract.findUnique({
           where: { contractNo: sheet.contractNo },
         });
@@ -152,17 +151,17 @@ export async function POST(request: NextRequest) {
           if (!forceReimport) {
             result.status = "skipped";
             result.contractId = existingContract.id;
-            result.message = `Contract ${sheet.contractNo} มีอยู่แล้ว — ข้าม (ใช้ Force Re-import เพื่อนำเข้าซ้ำ)`;
+            result.message = `Contract ${sheet.contractNo} มีอยู่แล้ว — ข้าม (ติ๊ก Force re-import เพื่อนำเข้าซ้ำ)`;
             results.push(result);
             continue;
           }
-          // Force: delete existing contract items first so we can re-create
+          // Force: delete existing items/notifications/contract first
           await prisma.contractItem.deleteMany({ where: { contractId: existingContract.id } });
           await prisma.notification.deleteMany({ where: { entityId: existingContract.id } });
           await prisma.contract.delete({ where: { id: existingContract.id } });
         }
 
-        // ── Upsert Customer ──────────────────────────────────────────────────
+        // Upsert Customer
         let customer = await prisma.customer.findFirst({
           where: {
             companyName: { equals: sheet.customer.name, mode: "insensitive" },
@@ -182,7 +181,6 @@ export async function POST(request: NextRequest) {
             },
           });
         } else {
-          // Update contact info if missing
           await prisma.customer.update({
             where: { id: customer.id },
             data: {
@@ -197,7 +195,7 @@ export async function POST(request: NextRequest) {
         result.customerId   = customer.id;
         result.customerName = customer.companyName;
 
-        // ── Determine overall contract SLA (from most common item SLA) ───────
+        // Determine overall contract SLA
         const slaCounts: Record<string, number> = {};
         sheet.items.forEach((item) => {
           const s = mapSla(item.sla);
@@ -205,13 +203,13 @@ export async function POST(request: NextRequest) {
         });
         const contractSla = (Object.entries(slaCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "ONSITE_NBD") as SlaType;
 
-        // ── Determine contract dates ─────────────────────────────────────────
+        // Determine contract dates
         const itemStarts = sheet.items.map((i) => i.startDate).filter(Boolean) as Date[];
         const itemEnds   = sheet.items.map((i) => i.endDate).filter(Boolean) as Date[];
         const contractStart = itemStarts.length ? new Date(Math.min(...itemStarts.map((d) => d.getTime()))) : (sheet.date ?? new Date());
         const contractEnd   = itemEnds.length   ? new Date(Math.max(...itemEnds.map((d) => d.getTime())))   : new Date(contractStart.getFullYear() + 1, contractStart.getMonth(), contractStart.getDate());
 
-        // ── Create Contract ──────────────────────────────────────────────────
+        // Create Contract
         const contract = await prisma.contract.create({
           data: {
             contractNo:  sheet.contractNo,
@@ -230,12 +228,10 @@ export async function POST(request: NextRequest) {
 
         result.contractId = contract.id;
 
-        // ── Create ContractItems + Assets ────────────────────────────────────
         let itemsCreated  = 0;
         let assetsCreated = 0;
 
         for (const item of sheet.items) {
-          // Check if asset with this serial already exists
           let assetId: string | undefined;
 
           if (item.serialNumber) {
@@ -244,7 +240,6 @@ export async function POST(request: NextRequest) {
             });
 
             if (!existingAsset) {
-              // Create new asset
               const assetCode = await generateAssetCode();
               const brand     = extractBrand(item.description, item.partNumber);
               const model     = extractModel(item.description, item.partNumber);
@@ -269,7 +264,6 @@ export async function POST(request: NextRequest) {
               assetsCreated++;
             } else {
               assetId = existingAsset.id;
-              // Update warranty dates if missing
               if (!existingAsset.warrantyEnd && item.endDate) {
                 await prisma.asset.update({
                   where: { id: existingAsset.id },
@@ -279,14 +273,12 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Determine item type
           const itemType: "HARDWARE" | "LICENSE" | "SUBSCRIPTION" | "SERVICE" | "SUPPORT" =
             item.serialNumber ? "HARDWARE"
             : /license|subscription|subscr|subs/i.test(item.description) ? "LICENSE"
             : /software|sw|support/i.test(item.description) ? "SUPPORT"
             : "SERVICE";
 
-          // Create ContractItem
           await prisma.contractItem.create({
             data: {
               contractId:   contract.id,
@@ -310,7 +302,7 @@ export async function POST(request: NextRequest) {
         result.itemsCreated  = itemsCreated;
         result.assetsCreated = assetsCreated;
 
-        // ── Create Notifications for expiring contracts / assets ──────────────
+        // Create Notifications for expiring contracts / assets
         const notifUsers = await prisma.user.findMany({
           where: { role: { in: ["ADMIN", "SALE"] }, status: "ACTIVE", deletedAt: null },
         });
@@ -339,7 +331,6 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Check assets for expiring warranties
         for (const item of sheet.items) {
           if (!item.serialNumber || !item.endDate) continue;
           const daysUntilWarranty = Math.ceil((item.endDate.getTime() - Date.now()) / 86400000);
@@ -367,6 +358,26 @@ export async function POST(request: NextRequest) {
 
         result.notificationsCreated = notifCount;
         result.status  = "imported";
-        result.message = `นำเข้าสำเร็จ — ${itemsCreated} items, ${assetsCreated} assets ใหม่${notifCount > 0 ? `, ${notifCount} notifications` : ""}`;
+        result.message = `นำเข้าสำเร็จ: ${itemsCreated} items, ${assetsCreated} assets ใหม่${notifCount > 0 ? `, ${notifCount} notifications` : ""}`;
 
-   
+      } catch (sheetErr) {
+        result.status  = "error";
+        result.message = `Error: ${String(sheetErr)}`;
+      }
+
+      results.push(result);
+    }
+
+    const summary = {
+      total:    results.length,
+      imported: results.filter((r) => r.status === "imported").length,
+      skipped:  results.filter((r) => r.status === "skipped").length,
+      errors:   results.filter((r) => r.status === "error").length,
+    };
+
+    return NextResponse.json({ success: true, summary, results });
+  } catch (err) {
+    console.error("[import/certification] Fatal error:", err);
+    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+  }
+}
