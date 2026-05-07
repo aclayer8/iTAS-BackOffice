@@ -18,10 +18,8 @@ export default async function CustomersPage() {
     <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>← Dashboard</Link>
-          </div>
-          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>🏢 Customer Management</h1>
+          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Dashboard</Link>
+          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>Customer Management</h1>
           <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{customers.length} customers in system</p>
         </div>
         <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>
@@ -41,7 +39,11 @@ export default async function CustomersPage() {
           <tbody>
             {customers.map((c, i) => (
               <tr key={c.id} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "12px 16px", fontWeight: 600, color: "#1E3A5F" }}>{c.companyName}</td>
+                <td style={{ padding: "12px 16px", fontWeight: 600 }}>
+                  <Link href={`/customers/${c.id}`} style={{ color: "#1E3A5F", textDecoration: "none" }}>
+                    {c.companyName}
+                  </Link>
+                </td>
                 <td style={{ padding: "12px 16px", color: "#6b7280" }}>{c.shortName ?? "—"}</td>
                 <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "12px" }}>{c.taxId ?? "—"}</td>
                 <td style={{ padding: "12px 16px" }}>
@@ -54,7 +56,11 @@ export default async function CustomersPage() {
                   </span>
                 </td>
                 <td style={{ padding: "12px 16px", textAlign: "center" }}>{c._count.sites}</td>
-                <td style={{ padding: "12px 16px", textAlign: "center" }}>{c._count.contracts}</td>
+                <td style={{ padding: "12px 16px", textAlign: "center", fontWeight: 600, color: c._count.contracts > 0 ? "#2563EB" : "#6b7280" }}>
+                  {c._count.contracts > 0
+                    ? <Link href={`/customers/${c.id}`} style={{ color: "#2563EB", textDecoration: "none" }}>{c._count.contracts}</Link>
+                    : 0}
+                </td>
                 <td style={{ padding: "12px 16px", textAlign: "center" }}>{c._count.assets}</td>
               </tr>
             ))}
