@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, DragEvent } from "react";
 import Link from "next/link";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types ---
 interface SheetResult {
   sheetName: string;
   contractNo: string;
@@ -21,46 +21,37 @@ interface ImportResponse {
   results?: SheetResult[];
   error?: string;
 }
+interface ResetResponse {
+  success: boolean;
+  deleted?: { notifications: number; contractItems: number; assets: number; contracts: number; customers: number };
+  message?: string;
+  error?: string;
+}
 
 const STATUS_COLOR = { imported: "#059669", skipped: "#d97706", error: "#dc2626" };
 const STATUS_BG    = { imported: "#d1fae5", skipped: "#fef3c7", error: "#fee2e2" };
 const STATUS_LABEL = { imported: "✅ นำเข้าแล้ว", skipped: "⏭ ข้ามแล้ว", error: "❌ Error" };
 
-// ─── Animated progress bar ────────────────────────────────────────────────────
+// --- Animated progress bar ---
 function ProgressBar({ loading }: { loading: boolean }) {
   const [progress, setProgress] = useState(0);
   const [elapsed, setElapsed]   = useState(0);
   const startRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!loading) {
-      setProgress(0);
-      setElapsed(0);
-      return;
-    }
+    if (!loading) { setProgress(0); setElapsed(0); return; }
     startRef.current = Date.now();
     setProgress(0);
 
-    const elapsedInterval = setInterval(() => {
-      setElapsed(Math.round((Date.now() - startRef.current) / 1000));
-    }, 500);
-
-    const progressInterval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 88) return p;
-        const step = (90 - p) * 0.04;
-        return p + Math.max(step, 0.3);
-      });
-    }, 400);
-
-    return () => {
-      clearInterval(elapsedInterval);
-      clearInterval(progressInterval);
-    };
+    const ei = setInterval(() => setElapsed(Math.round((Date.now() - startRef.current) / 1000)), 500);
+    const pi = setInterval(() => setProgress((p) => {
+      if (p >= 88) return p;
+      return p + Math.max((90 - p) * 0.04, 0.3);
+    }), 400);
+    return () => { clearInterval(ei); clearInterval(pi); };
   }, [loading]);
 
   if (!loading) return null;
-
   const pct = Math.round(progress);
   const steps = [
     { label: "อ่านไฟล์ Excel",    done: pct > 5  },
@@ -72,49 +63,21 @@ function ProgressBar({ loading }: { loading: boolean }) {
   ];
 
   return (
-    <div style={{
-      backgroundColor: "white",
-      border: "1px solid #e2e8f0",
-      borderRadius: "14px",
-      padding: "24px 28px",
-      marginBottom: "24px",
-      boxShadow: "0 2px 8px rgba(0,0,0,.08)",
-    }}>
+    <div style={{ backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "24px 28px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-        <div style={{ fontWeight: 700, color: "#1E3A5F", fontSize: "15px" }}>
-          ⏳ กำลังนำเข้าข้อมูล...
-        </div>
-        <div style={{ fontSize: "13px", color: "#6b7280" }}>
-          ผ่านไปแล้ว {elapsed} วินาที
-        </div>
+        <div style={{ fontWeight: 700, color: "#1E3A5F", fontSize: "15px" }}>⏳ กำลังนำเข้าข้อมูล...</div>
+        <div style={{ fontSize: "13px", color: "#6b7280" }}>ผ่านไปแล้ว {elapsed} วินาที</div>
       </div>
-
       <div style={{ height: "10px", backgroundColor: "#e2e8f0", borderRadius: "99px", overflow: "hidden", marginBottom: "16px" }}>
-        <div style={{
-          height: "100%",
-          width: `${pct}%`,
-          background: "linear-gradient(90deg, #1E3A5F, #2563eb)",
-          borderRadius: "99px",
-          transition: "width .4s ease",
-        }} />
+        <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, #1E3A5F, #2563eb)", borderRadius: "99px", transition: "width .4s ease" }} />
       </div>
-
       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
         {steps.map((s) => (
-          <div key={s.label} style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            padding: "3px 10px",
-            borderRadius: "99px",
-            backgroundColor: s.done ? "#d1fae5" : "#f1f5f9",
-            color: s.done ? "#065f46" : "#94a3b8",
-            transition: "all .3s",
-          }}>
+          <div key={s.label} style={{ fontSize: "11px", fontWeight: 600, padding: "3px 10px", borderRadius: "99px", backgroundColor: s.done ? "#d1fae5" : "#f1f5f9", color: s.done ? "#065f46" : "#94a3b8", transition: "all .3s" }}>
             {s.done ? "✓ " : ""}{s.label}
           </div>
         ))}
       </div>
-
       <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "14px" }}>
         กรุณารอจนกว่าระบบจะประมวลผลเสร็จ — อาจใช้เวลา 15-45 วินาที ขึ้นอยู่กับจำนวน Sheets
       </div>
@@ -122,13 +85,48 @@ function ProgressBar({ loading }: { loading: boolean }) {
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// --- Reset confirmation dialog ---
+function ResetDialog({ onConfirm, onCancel, resetting }: { onConfirm: () => void; onCancel: () => void; resetting: boolean }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }}>
+      <div style={{ backgroundColor: "white", borderRadius: "16px", padding: "32px", maxWidth: "420px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+        <div style={{ fontSize: "48px", textAlign: "center", marginBottom: "16px" }}>⚠️</div>
+        <h2 style={{ textAlign: "center", color: "#dc2626", margin: "0 0 8px", fontSize: "20px" }}>ล้างข้อมูลทั้งหมด?</h2>
+        <p style={{ textAlign: "center", color: "#6b7280", fontSize: "14px", marginBottom: "24px", lineHeight: "1.6" }}>
+          ระบบจะลบ <strong>Customers, Contracts, Assets, Notifications</strong> ทั้งหมดออกจากฐานข้อมูล<br />
+          <span style={{ color: "#dc2626" }}>ไม่สามารถกู้คืนได้</span> — Users ยังคงอยู่
+        </p>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button
+            onClick={onCancel}
+            disabled={resetting}
+            style={{ flex: 1, padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "white", color: "#374151", cursor: "pointer", fontSize: "14px", fontWeight: 600 }}
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={resetting}
+            style={{ flex: 1, padding: "12px", borderRadius: "8px", border: "none", backgroundColor: "#dc2626", color: "white", cursor: resetting ? "not-allowed" : "pointer", fontSize: "14px", fontWeight: 700, opacity: resetting ? 0.7 : 1 }}
+          >
+            {resetting ? "⏳ กำลังล้าง..." : "🗑️ ล้างเลย"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Main component ---
 export default function ImportPage() {
-  const [file,     setFile]     = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [result,   setResult]   = useState<ImportResponse | null>(null);
-  const [force,    setForce]    = useState(false);
+  const [file,      setFile]      = useState<File | null>(null);
+  const [dragging,  setDragging]  = useState(false);
+  const [loading,   setLoading]   = useState(false);
+  const [result,    setResult]    = useState<ImportResponse | null>(null);
+  const [force,     setForce]     = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<ResetResponse | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
@@ -142,11 +140,10 @@ export default function ImportPage() {
     if (!file) return;
     setLoading(true);
     setResult(null);
-
+    setResetResult(null);
     const fd = new FormData();
     fd.append("file", file);
     if (force) fd.append("force", "true");
-
     try {
       const res  = await fetch("/api/import/certification", { method: "POST", body: fd });
       const data = await res.json();
@@ -158,17 +155,75 @@ export default function ImportPage() {
     }
   }
 
+  async function handleReset() {
+    setResetting(true);
+    try {
+      const res  = await fetch("/api/admin/reset-data", { method: "POST" });
+      const data = await res.json();
+      setResetResult(data);
+      setResult(null);
+    } catch (err) {
+      setResetResult({ success: false, error: String(err) });
+    } finally {
+      setResetting(false);
+      setShowReset(false);
+    }
+  }
+
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
 
-      <div style={{ marginBottom: "24px" }}>
-        <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>← Dashboard</Link>
-        <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>📥 Import Certification Form</h1>
-        <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
-          อัปโหลดไฟล์ Excel Certification of Maintenance Service — ระบบจะดึงข้อมูล Customer, Contract, Asset และตั้ง Notification อัตโนมัติ
-        </p>
+      {showReset && <ResetDialog onConfirm={handleReset} onCancel={() => setShowReset(false)} resetting={resetting} />}
+
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+        <div>
+          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>← Dashboard</Link>
+          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>📥 Import Certification Form</h1>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+            อัปโหลดไฟล์ Excel Certification of Maintenance Service — ระบบจะดึงข้อมูล Customer, Contract, Asset และตั้ง Notification อัตโนมัติ
+          </p>
+        </div>
+        <button
+          onClick={() => setShowReset(true)}
+          disabled={loading || resetting}
+          style={{
+            backgroundColor: "white", color: "#dc2626", border: "1px solid #fca5a5",
+            padding: "10px 18px", borderRadius: "8px", cursor: "pointer",
+            fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap",
+            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+          }}
+        >
+          🗑️ ล้างข้อมูลทั้งหมด
+        </button>
       </div>
 
+      {/* Reset result banner */}
+      {resetResult && (
+        <div style={{
+          backgroundColor: resetResult.success ? "#d1fae5" : "#fee2e2",
+          border: `1px solid ${resetResult.success ? "#6ee7b7" : "#fca5a5"}`,
+          borderRadius: "10px", padding: "14px 18px", marginBottom: "20px",
+          display: "flex", gap: "12px", alignItems: "center",
+        }}>
+          <span style={{ fontSize: "20px" }}>{resetResult.success ? "✅" : "❌"}</span>
+          <div>
+            <div style={{ fontWeight: 700, color: resetResult.success ? "#065f46" : "#dc2626", fontSize: "14px" }}>
+              {resetResult.success ? "ล้างข้อมูลสำเร็จ!" : "เกิดข้อผิดพลาด"}
+            </div>
+            {resetResult.success && resetResult.deleted && (
+              <div style={{ color: "#047857", fontSize: "12px", marginTop: "2px" }}>
+                ลบ: {resetResult.deleted.customers} customers, {resetResult.deleted.contracts} contracts, {resetResult.deleted.assets} assets, {resetResult.deleted.contractItems} items, {resetResult.deleted.notifications} notifications
+              </div>
+            )}
+            {!resetResult.success && (
+              <div style={{ color: "#7f1d1d", fontSize: "12px", marginTop: "2px" }}>{resetResult.error}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Info cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "24px" }}>
         {[
           { icon: "🏢", title: "Customer",   desc: "สร้าง/อัปเดตข้อมูลลูกค้า" },
@@ -186,6 +241,7 @@ export default function ImportPage() {
         ))}
       </div>
 
+      {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
@@ -193,24 +249,15 @@ export default function ImportPage() {
         onClick={() => !loading && inputRef.current?.click()}
         style={{
           border: `2px dashed ${dragging ? "#1E3A5F" : "#cbd5e1"}`,
-          borderRadius: "16px",
-          padding: "48px 32px",
-          textAlign: "center",
+          borderRadius: "16px", padding: "48px 32px", textAlign: "center",
           backgroundColor: dragging ? "#eff6ff" : "white",
           cursor: loading ? "not-allowed" : "pointer",
-          transition: "all .2s",
-          marginBottom: "20px",
-          boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-          opacity: loading ? 0.6 : 1,
+          transition: "all .2s", marginBottom: "20px",
+          boxShadow: "0 1px 4px rgba(0,0,0,.06)", opacity: loading ? 0.6 : 1,
         }}
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx"
-          style={{ display: "none" }}
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f); }}
-        />
+        <input ref={inputRef} type="file" accept=".xlsx" style={{ display: "none" }}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f); }} />
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>📊</div>
         {file ? (
           <>
@@ -221,59 +268,44 @@ export default function ImportPage() {
           </>
         ) : (
           <>
-            <div style={{ fontSize: "16px", fontWeight: 600, color: "#374151" }}>
-              วาง Excel (.xlsx) ที่นี่ หรือคลิกเพื่อเลือกไฟล์
-            </div>
-            <div style={{ color: "#9ca3af", fontSize: "13px", marginTop: "6px" }}>
-              รองรับไฟล์ Certification of Maintenance Service — นำเข้าได้ทีเดียวทุก Sheet
-            </div>
+            <div style={{ fontSize: "16px", fontWeight: 600, color: "#374151" }}>วาง Excel (.xlsx) ที่นี่ หรือคลิกเพื่อเลือกไฟล์</div>
+            <div style={{ color: "#9ca3af", fontSize: "13px", marginTop: "6px" }}>รองรับไฟล์ Certification of Maintenance Service — นำเข้าได้ทีเดียวทุก Sheet</div>
           </>
         )}
       </div>
 
+      {/* Options */}
       <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "16px" }}>
         <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", userSelect: "none" }}>
-          <input
-            type="checkbox"
-            checked={force}
-            onChange={(e) => setForce(e.target.checked)}
-            disabled={loading}
-            style={{ width: "16px", height: "16px", accentColor: "#dc2626", cursor: "pointer" }}
-          />
+          <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} disabled={loading}
+            style={{ width: "16px", height: "16px", accentColor: "#dc2626", cursor: "pointer" }} />
           <span style={{ fontSize: "13px", color: "#dc2626", fontWeight: 600 }}>
             🔄 Force re-import (นำเข้าซ้ำแม้ Contract จะมีอยู่แล้ว)
           </span>
         </label>
       </div>
 
+      {/* Buttons */}
       <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "28px" }}>
-        <button
-          onClick={handleImport}
-          disabled={!file || loading}
-          style={{
-            backgroundColor: file && !loading ? "#1E3A5F" : "#9ca3af",
-            color: "white", border: "none",
-            padding: "14px 36px", borderRadius: "10px", cursor: file && !loading ? "pointer" : "not-allowed",
-            fontSize: "15px", fontWeight: "bold", transition: "background .2s",
-          }}
-        >
+        <button onClick={handleImport} disabled={!file || loading} style={{
+          backgroundColor: file && !loading ? "#1E3A5F" : "#9ca3af",
+          color: "white", border: "none", padding: "14px 36px", borderRadius: "10px",
+          cursor: file && !loading ? "pointer" : "not-allowed",
+          fontSize: "15px", fontWeight: "bold", transition: "background .2s",
+        }}>
           {loading ? "⏳ กำลังนำเข้า..." : "🚀 เริ่มนำเข้าข้อมูล"}
         </button>
         {file && !loading && (
-          <button
-            onClick={() => { setFile(null); setResult(null); setForce(false); }}
-            style={{
-              backgroundColor: "white", color: "#6b7280", border: "1px solid #e2e8f0",
-              padding: "14px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px",
-            }}
-          >
-            ล้าง
-          </button>
+          <button onClick={() => { setFile(null); setResult(null); setForce(false); }} style={{
+            backgroundColor: "white", color: "#6b7280", border: "1px solid #e2e8f0",
+            padding: "14px 24px", borderRadius: "10px", cursor: "pointer", fontSize: "14px",
+          }}>ล้าง</button>
         )}
       </div>
 
       <ProgressBar loading={loading} />
 
+      {/* Import error */}
       {result && !result.success && (
         <div style={{ backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "10px", padding: "16px 20px", marginBottom: "20px" }}>
           <div style={{ color: "#dc2626", fontWeight: 700 }}>❌ เกิดข้อผิดพลาด</div>
@@ -281,6 +313,7 @@ export default function ImportPage() {
         </div>
       )}
 
+      {/* Summary */}
       {result?.success && result.summary && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "24px" }}>
           {[
@@ -297,6 +330,7 @@ export default function ImportPage() {
         </div>
       )}
 
+      {/* Results table */}
       {result?.success && result.results && (
         <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 4px rgba(0,0,0,.08)", overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
@@ -316,33 +350,23 @@ export default function ImportPage() {
                   </td>
                   <td style={{ padding: "11px 14px", fontWeight: 600 }}>{r.customerName ?? "—"}</td>
                   <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                    <span style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>
-                      {r.itemsCreated}
-                    </span>
+                    <span style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>{r.itemsCreated}</span>
                   </td>
                   <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                    <span style={{ backgroundColor: "#d1fae5", color: "#065f46", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>
-                      {r.assetsCreated}
-                    </span>
+                    <span style={{ backgroundColor: "#d1fae5", color: "#065f46", padding: "2px 8px", borderRadius: "99px", fontWeight: 700, fontSize: "12px" }}>{r.assetsCreated}</span>
                   </td>
                   <td style={{ padding: "11px 14px", textAlign: "center", color: "#6b7280" }}>
                     {r.notificationsCreated > 0 ? `🔔 ${r.notificationsCreated}` : "—"}
                   </td>
                   <td style={{ padding: "11px 14px" }}>
-                    <span style={{
-                      backgroundColor: STATUS_BG[r.status],
-                      color: STATUS_COLOR[r.status],
-                      padding: "3px 10px", borderRadius: "99px", fontSize: "12px", fontWeight: 700,
-                    }}>
+                    <span style={{ backgroundColor: STATUS_BG[r.status], color: STATUS_COLOR[r.status], padding: "3px 10px", borderRadius: "99px", fontSize: "12px", fontWeight: 700 }}>
                       {STATUS_LABEL[r.status]}
                     </span>
                   </td>
                   <td style={{ padding: "11px 14px", color: "#6b7280", fontSize: "12px", maxWidth: "280px" }}>
                     <div title={r.message}>{r.message.length > 80 ? r.message.slice(0, 80) + "..." : r.message}</div>
                     {r.parseErrors && r.parseErrors.length > 0 && (
-                      <div style={{ marginTop: "4px", color: "#dc2626", fontSize: "11px" }}>
-                        ⚠️ Parse: {r.parseErrors.join("; ")}
-                      </div>
+                      <div style={{ marginTop: "4px", color: "#dc2626", fontSize: "11px" }}>⚠️ Parse: {r.parseErrors.join("; ")}</div>
                     )}
                   </td>
                 </tr>
@@ -354,16 +378,10 @@ export default function ImportPage() {
 
       {result?.success && result.summary && result.summary.imported > 0 && (
         <div style={{ marginTop: "20px", display: "flex", gap: "12px" }}>
-          <Link href="/assets" style={{
-            backgroundColor: "#7c3aed", color: "white", padding: "10px 24px",
-            borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600,
-          }}>
+          <Link href="/assets" style={{ backgroundColor: "#7c3aed", color: "white", padding: "10px 24px", borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600 }}>
             🖥️ ดู Assets ที่นำเข้า
           </Link>
-          <Link href="/contracts" style={{
-            backgroundColor: "#1E3A5F", color: "white", padding: "10px 24px",
-            borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600,
-          }}>
+          <Link href="/contracts" style={{ backgroundColor: "#1E3A5F", color: "white", padding: "10px 24px", borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 600 }}>
             📄 ดู Contracts ที่นำเข้า
           </Link>
         </div>
