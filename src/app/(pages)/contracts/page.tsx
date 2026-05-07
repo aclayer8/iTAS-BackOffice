@@ -27,7 +27,7 @@ export default async function ContractsPage({
 }) {
   const params = await searchParams;
   const col    = (params.sort  ?? "contractNo") as SortCol;
-  const order  = (params.order ?? "desc")      as SortOrder;
+  const order  = (params.order ?? "desc")       as SortOrder;
   const status = params.status ?? "";
 
   const contracts = await prisma.contract.findMany({
@@ -55,7 +55,6 @@ export default async function ContractsPage({
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
 
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div>
           <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Dashboard</Link>
@@ -67,14 +66,13 @@ export default async function ContractsPage({
         </button>
       </div>
 
-      {/* Status filter tabs */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
         {[
-          { label: "All", value: "" },
-          { label: "ACTIVE",          value: "ACTIVE" },
-          { label: "EXPIRED",         value: "EXPIRED" },
-          { label: "PENDING RENEWAL", value: "PENDING_RENEWAL" },
-          { label: "DRAFT",           value: "DRAFT" },
+          { label: "All",            value: "" },
+          { label: "ACTIVE",         value: "ACTIVE" },
+          { label: "EXPIRED",        value: "EXPIRED" },
+          { label: "PENDING RENEWAL",value: "PENDING_RENEWAL" },
+          { label: "DRAFT",          value: "DRAFT" },
         ].map((tab) => {
           const active = status === tab.value;
           const cnt = tab.value === "" ? contracts.length : (countMap[tab.value] ?? 0);
@@ -87,13 +85,12 @@ export default async function ContractsPage({
               color: active ? "white" : "#6b7280",
               border: `1px solid ${active ? "#1E3A5F" : "#e2e8f0"}`,
             }}>
-              {tab.label} {tab.value !== "" && <span style={{ opacity: .7, fontSize: "11px" }}>({cnt})</span>}
+              {tab.label}{tab.value !== "" && <span style={{ opacity: .7, fontSize: "11px" }}> ({cnt})</span>}
             </Link>
           );
         })}
       </div>
 
-      {/* Table */}
       <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
           <thead>
@@ -112,7 +109,7 @@ export default async function ContractsPage({
               ].map(({ label, key }) => {
                 if (!key) {
                   return (
-                    <th key={label} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap", userSelect: "none" }}>
+                    <th key={label} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>
                       {label}
                     </th>
                   );
@@ -123,10 +120,7 @@ export default async function ContractsPage({
                 const href = `/contracts?sort=${key}&order=${nextOrder}${status ? `&status=${status}` : ""}`;
                 return (
                   <th key={label} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>
-                    <Link href={href} style={{
-                      color: "white", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px",
-                      opacity: isActive ? 1 : 0.85,
-                    }}>
+                    <Link href={href} style={{ color: "white", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", opacity: isActive ? 1 : 0.85 }}>
                       {label}
                       <span style={{ fontSize: "12px", opacity: isActive ? 1 : 0.5 }}>{arrow}</span>
                     </Link>
@@ -178,3 +172,4 @@ export default async function ContractsPage({
       </div>
     </div>
   );
+}
