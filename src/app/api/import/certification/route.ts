@@ -11,9 +11,8 @@ import { generateAssetCode } from "@/lib/contract-number";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Vercel max: 60s (Hobby), 300s (Pro)
+export const maxDuration = 60;
 
-// --- SLA mapping: Excel string -> Prisma enum ---
 type SlaType =
   | "ONSITE_NBD" | "ONSITE_4HR" | "REMOTE_NBD" | "REMOTE_4HR"
   | "BEST_EFFORT" | "CUSTOM";
@@ -30,7 +29,6 @@ function mapSla(sla: string): SlaType {
   return "CUSTOM";
 }
 
-// --- Asset type detection from description + part number ---
 type AssetType =
   | "FIREWALL" | "SWITCH" | "WIRELESS_AP" | "SERVER" | "STORAGE"
   | "UPS" | "ROUTER" | "LOAD_BALANCER" | "OTHER";
@@ -48,7 +46,6 @@ function detectAssetType(desc: string, partNo: string): AssetType {
   return "OTHER";
 }
 
-// --- Extract brand from description / part number ---
 function extractBrand(desc: string, partNo: string): string {
   const t = (desc + " " + partNo).toLowerCase();
   if (t.includes("palo alto") || /^pan-/.test(partNo.toLowerCase())) return "Palo Alto Networks";
@@ -67,17 +64,15 @@ function extractBrand(desc: string, partNo: string): string {
   return "Unknown";
 }
 
-// --- Extract model from description ---
 function extractModel(desc: string, partNo: string): string {
   const match = desc.match(/^([A-Z0-9][A-Z0-9\-/]{2,})/i);
   if (match) return match[1];
   return partNo || desc.split(",")[0].trim().slice(0, 60);
 }
 
-// --- Suppress unused import warning ---
+// suppress unused import warning
 type _ParsedItemType = ParsedItem;
 
-// --- Main handler ---
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -91,7 +86,6 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const sheets  = parseCertificationWorkbook(buffer);
 
-    // Get or create admin user for createdById
     let adminUser = await prisma.user.findFirst({
       where: { role: "ADMIN", status: "ACTIVE", deletedAt: null },
     });
@@ -144,7 +138,6 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check if contract already imported
         const existingContract = await prisma.contract.findUnique({
           where: { contractNo: sheet.contractNo },
         });
@@ -152,17 +145,15 @@ export async function POST(request: NextRequest) {
           if (!forceReimport) {
             result.status = "skipped";
             result.contractId = existingContract.id;
-            result.message = `Contract ${sheet.contractNo} มีอยู่แล้ว — ข้าม (ติ๊ก Force re-import เพื่อนำเข้าซ้ำ)`;
+            result.message = `Contract ${sheet.contractNo} already exists — skip (check Force re-import to overwrite)`;
             results.push(result);
             continue;
           }
-          // Force: delete existing items/notifications/contract first
           await prisma.contractItem.deleteMany({ where: { contractId: existingContract.id } });
           await prisma.notification.deleteMany({ where: { entityId: existingContract.id } });
           await prisma.contract.delete({ where: { id: existingContract.id } });
         }
 
-        // Upsert Customer
         let customer = await prisma.customer.findFirst({
           where: {
             companyName: { equals: sheet.customer.name, mode: "insensitive" },
@@ -196,7 +187,6 @@ export async function POST(request: NextRequest) {
         result.customerId   = customer.id;
         result.customerName = customer.companyName;
 
-        // Determine overall contract SLA
         const slaCounts: Record<string, number> = {};
         sheet.items.forEach((item) => {
           const s = mapSla(item.sla);
@@ -204,13 +194,11 @@ export async function POST(request: NextRequest) {
         });
         const contractSla = (Object.entries(slaCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "ONSITE_NBD") as SlaType;
 
-        // Determine contract dates
         const itemStarts = sheet.items.map((i) => i.startDate).filter(Boolean) as Date[];
         const itemEnds   = sheet.items.map((i) => i.endDate).filter(Boolean) as Date[];
         const contractStart = itemStarts.length ? new Date(Math.min(...itemStarts.map((d) => d.getTime()))) : (sheet.date ?? new Date());
         const contractEnd   = itemEnds.length   ? new Date(Math.max(...itemEnds.map((d) => d.getTime())))   : new Date(contractStart.getFullYear() + 1, contractStart.getMonth(), contractStart.getDate());
 
-        // Create Contract
         const contract = await prisma.contract.create({
           data: {
             contractNo:  sheet.contractNo,
@@ -303,7 +291,6 @@ export async function POST(request: NextRequest) {
         result.itemsCreated  = itemsCreated;
         result.assetsCreated = assetsCreated;
 
-        // Create Notifications for expiring contracts / assets
         const notifUsers = await prisma.user.findMany({
           where: { role: { in: ["ADMIN", "SALE"] }, status: "ACTIVE", deletedAt: null },
         });
@@ -317,11 +304,11 @@ export async function POST(request: NextRequest) {
               data: {
                 userId:     u.id,
                 type:       "CONTRACT_EXPIRING",
-                title:      `สัญญา ${sheet.contractNo} ใกล้หมดอายุ`,
-                message:    `สัญญาของ ${customer.companyName} (${sheet.contractNo}) ${
+                title:      `Contract ${sheet.contractNo} expiring soon`,
+                message:    `Contract for ${customer.companyName} (${sheet.contractNo}) ${
                   daysUntilContractEnd < 0
-                    ? `หมดอายุแล้ว ${Math.abs(daysUntilContractEnd)} วัน`
-                    : `เหลือ ${daysUntilContractEnd} วัน (${contractEnd.toLocaleDateString("th-TH")})`
+                    ? `expired ${Math.abs(daysUntilContractEnd)} days ago`
+                    : `expires in ${daysUntilContractEnd} days (${contractEnd.toLocaleDateString("en-GB")})`
                 }`,
                 entityType: "contract",
                 entityId:   contract.id,
@@ -341,11 +328,11 @@ export async function POST(request: NextRequest) {
                 data: {
                   userId:    u.id,
                   type:      "WARRANTY_EXPIRING",
-                  title:     `ประกัน ${item.serialNumber} ใกล้หมดอายุ`,
-                  message:   `อุปกรณ์ Serial: ${item.serialNumber} (${item.description?.split(",")[0] ?? ""}) ของ ${customer.companyName} ${
+                  title:     `Warranty ${item.serialNumber} expiring soon`,
+                  message:   `Device Serial: ${item.serialNumber} (${item.description?.split(",")[0] ?? ""}) for ${customer.companyName} ${
                     daysUntilWarranty < 0
-                      ? `หมดประกันแล้ว ${Math.abs(daysUntilWarranty)} วัน`
-                      : `เหลือ ${daysUntilWarranty} วัน`
+                      ? `warranty expired ${Math.abs(daysUntilWarranty)} days ago`
+                      : `expires in ${daysUntilWarranty} days`
                   }`,
                   entityType: "contract",
                   entityId:   contract.id,
@@ -359,7 +346,7 @@ export async function POST(request: NextRequest) {
 
         result.notificationsCreated = notifCount;
         result.status  = "imported";
-        result.message = `นำเข้าสำเร็จ: ${itemsCreated} items, ${assetsCreated} assets ใหม่${notifCount > 0 ? `, ${notifCount} notifications` : ""}`;
+        result.message = `Imported: ${itemsCreated} items, ${assetsCreated} new assets${notifCount > 0 ? `, ${notifCount} notifications` : ""}`;
 
       } catch (sheetErr) {
         result.status  = "error";
@@ -379,4 +366,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, summary, results });
   } catch (err) {
     console.error("[import/certification] Fatal error:", err);
-    return NextResponse
+    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+  }
+}

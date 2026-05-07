@@ -12,7 +12,6 @@ function daysLeft(end: Date) {
   return Math.ceil((end.getTime() - Date.now()) / 86400000);
 }
 
-// ─── Valid sort columns ───────────────────────────────────────────────────────
 type SortCol = "contractNo" | "customer" | "endDate" | "startDate" | "status" | "slaType";
 type SortOrder = "asc" | "desc";
 
@@ -21,7 +20,6 @@ function buildOrderBy(col: SortCol, order: SortOrder) {
   return { [col]: order };
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ContractsPage({
   searchParams,
 }: {
@@ -46,7 +44,6 @@ export default async function ContractsPage({
     },
   });
 
-  // Compute counts for filter badges
   const counts = await prisma.contract.groupBy({
     by: ["status"],
     where: { deletedAt: null },
@@ -61,8 +58,8 @@ export default async function ContractsPage({
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div>
-          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>← Dashboard</Link>
-          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>📄 Contract Management</h1>
+          <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Dashboard</Link>
+          <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>Contract Management</h1>
           <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{contracts.length} contracts</p>
         </div>
         <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>
@@ -73,7 +70,7 @@ export default async function ContractsPage({
       {/* Status filter tabs */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
         {[
-          { label: "ทั้งหมด", value: "" },
+          { label: "All", value: "" },
           { label: "ACTIVE",          value: "ACTIVE" },
           { label: "EXPIRED",         value: "EXPIRED" },
           { label: "PENDING RENEWAL", value: "PENDING_RENEWAL" },
@@ -172,4 +169,13 @@ export default async function ContractsPage({
             {contracts.length === 0 && (
               <tr>
                 <td colSpan={10} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
-                  ไม�
+                  No contracts found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
