@@ -11,6 +11,7 @@ import { generateAssetCode } from "@/lib/contract-number";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // Vercel max: 60s (Hobby), 300s (Pro)
 
 // --- SLA mapping: Excel string -> Prisma enum ---
 type SlaType =
@@ -378,6 +379,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, summary, results });
   } catch (err) {
     console.error("[import/certification] Fatal error:", err);
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
-  }
-}
+    return NextResponse
