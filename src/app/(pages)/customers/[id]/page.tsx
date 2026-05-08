@@ -113,12 +113,26 @@ export default async function CustomerDetailPage({
       <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>
         <div style={{ padding: "18px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>Contracts</h2>
-          <span style={{ fontSize: "13px", color: "#94a3b8" }}>{customer.contracts.length} รายการ</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "13px", color: "#94a3b8" }}>{customer.contracts.length} รายการ</span>
+            <Link
+              href={`/contracts/new?customerId=${customer.id}`}
+              style={{ backgroundColor: "#1E3A5F", color: "white", padding: "7px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}
+            >
+              + Add Contract
+            </Link>
+          </div>
         </div>
 
         {customer.contracts.length === 0 ? (
           <div style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
-            ยังไม่มี Contract สำหรับลูกค้านี้
+            <div style={{ fontSize: "14px", marginBottom: "12px" }}>ยังไม่มี Contract สำหรับลูกค้านี้</div>
+            <Link
+              href={`/contracts/new?customerId=${customer.id}`}
+              style={{ backgroundColor: "#1E3A5F", color: "white", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}
+            >
+              + สร้าง Contract แรก
+            </Link>
           </div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>

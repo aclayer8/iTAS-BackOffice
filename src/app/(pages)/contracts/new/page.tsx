@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
 
 interface Customer {
@@ -103,8 +103,11 @@ function exportExcel(
   XLSX.writeFile(wb, filename);
 }
 
-export default function NewContractPage() {
+function NewContractForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetCustomerId = searchParams.get("customerId") ?? "";
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customer, setCustomer] = useState<Omit<Customer,"id">>({
@@ -121,8 +124,22 @@ export default function NewContractPage() {
   useEffect(() => {
     fetch("/api/customers?limit=500")
       .then(r => r.json())
-      .then(d => setCustomers(d.data ?? []));
-  }, []);
+      .then(d => {
+        const list: Customer[] = d.data ?? [];
+        setCustomers(list);
+        // Pre-select customer if customerId was passed in URL
+        if (presetCustomerId) {
+          const c = list.find(x => x.id === presetCustomerId);
+          if (c) {
+            setSelectedCustomerId(c.id);
+            setCustomer({
+              companyName: c.companyName, address: c.address ?? "",
+              contactPerson: c.contactPerson ?? "", contactPhone: c.contactPhone ?? "", contactEmail: c.contactEmail ?? "",
+            });
+          }
+        }
+      });
+  }, [presetCustomerId]);
 
   function selectCustomer(id: string) {
     setSelectedCustomerId(id);
@@ -343,6 +360,14 @@ export default function NewContractPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewContractPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "32px", color: "#6b7280" }}>Loading...</div>}>
+      <NewContractForm />
+    </Suspense>
   );
 }
 
