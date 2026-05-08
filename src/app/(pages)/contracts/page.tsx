@@ -61,9 +61,9 @@ export default async function ContractsPage({
           <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>Contract Management</h1>
           <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{contracts.length} contracts</p>
         </div>
-        <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>
+        <Link href="/contracts/new" style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold", textDecoration: "none" }}>
           + New Contract
-        </button>
+        </Link>
       </div>
 
       <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
