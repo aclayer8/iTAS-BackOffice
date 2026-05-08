@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import DeleteCustomerButton from "./DeleteCustomerButton";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function CustomersPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
           <thead>
             <tr style={{ backgroundColor: "#1E3A5F", color: "white" }}>
-              {["Company Name", "Short Name", "Tax ID", "Contact", "Status", "Sites", "Contracts", "Assets"].map(h => (
+              {["Company Name", "Short Name", "Tax ID", "Contact", "Status", "Sites", "Contracts", "Assets", ""].map(h => (
                 <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600 }}>{h}</th>
               ))}
             </tr>
@@ -62,10 +63,13 @@ export default async function CustomersPage() {
                     : 0}
                 </td>
                 <td style={{ padding: "12px 16px", textAlign: "center" }}>{c._count.assets}</td>
+                <td style={{ padding: "8px 8px", textAlign: "center" }}>
+                  <DeleteCustomerButton id={c.id} name={c.companyName} contractCount={c._count.contracts} />
+                </td>
               </tr>
             ))}
             {customers.length === 0 && (
-              <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>No customers found</td></tr>
+              <tr><td colSpan={9} style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>No customers found</td></tr>
             )}
           </tbody>
         </table>

@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import MoveCustomerButton from "./MoveCustomerButton";
 
 export const dynamic = "force-dynamic";
 
@@ -59,10 +60,11 @@ export default async function CustomerDetailPage({
               </span>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span style={{ backgroundColor: "#10b98120", color: "#10b981", padding: "4px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 700 }}>
               {customer.status}
             </span>
+            <MoveCustomerButton sourceId={customer.id} sourceName={customer.companyName} />
             <Link href={`/customers/${customer.id}/edit`} style={{ backgroundColor: "#f1f5f9", color: "#1E3A5F", border: "1px solid #e2e8f0", padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>
               Edit
             </Link>
