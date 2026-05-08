@@ -189,7 +189,10 @@ export function parseSheet(
   }
 
   // ── Customer Section ──────────────────────────────────────────────────────
-  const custHeaderIdx = findRowWith(raw, "customer");
+  // Support both English and Thai labels
+  let custHeaderIdx = findRowWith(raw, "customer");
+  if (custHeaderIdx === -1) custHeaderIdx = findRowWith(raw, "บริษัท");
+  if (custHeaderIdx === -1) custHeaderIdx = findRowWith(raw, "ลูกค้า");
   if (custHeaderIdx === -1) errors.push("Could not find Customer section");
 
   let custName = "";
@@ -206,14 +209,16 @@ export function parseSheet(
     const labelCell = cellStr(row[0]) + " " + cellStr(row[1]);
     const val = colDValue(row);
 
-    if (!custName && labelCell.toLowerCase().includes("name")) {
+    const isNameRow = labelCell.toLowerCase().includes("name") ||
+      labelCell.includes("ชื่อ") || labelCell.includes("บริษัท") || labelCell.includes("company");
+    if (!custName && isNameRow) {
       // Try col D first, then scan all columns for first non-label non-empty value
       if (val) {
         custName = val;
       } else {
         for (let c = 2; c < row.length; c++) {
           const v = cellStr(row[c]);
-          if (v && !v.toLowerCase().includes("name") && v !== ":") {
+          if (v && !v.toLowerCase().includes("name") && !v.includes("ชื่อ") && v !== ":") {
             custName = v;
             break;
           }
