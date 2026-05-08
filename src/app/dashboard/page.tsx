@@ -187,28 +187,26 @@ export default async function DashboardPage() {
             <div className="page-title">Dashboard Overview</div>
             <div className="page-date">{today}</div>
 
-            {expiringContractsList.length > 0 && (
-              <div style={{marginBottom:"24px"}}>
-                {expiringContractsList.map((ec) => {
-                  const daysLeft = Math.ceil((ec.endDate.getTime() - Date.now()) / 86400000);
-                  return (
-                    <div key={ec.id} className="alert" style={{marginBottom:"8px"}}>
-                      <span style={{fontSize:22}}>⚠️</span>
-                      <div style={{flex:1}}>
-                        <div className="alert-title">
-                          {ec.contractNo} — {ec.customer.companyName}
-                        </div>
-                        <div className="alert-sub">
-                          {ec.serviceDesc ? ec.serviceDesc.slice(0,60) + (ec.serviceDesc.length > 60 ? "…" : "") : ""}
-                          {" "}เหลือ {daysLeft} วัน ({ec.endDate.toLocaleDateString("th-TH")})
-                        </div>
-                      </div>
-                      <a href={`/contracts/${ec.id}`} className="alert-btn">ดูสัญญา</a>
+            {expiringContractsList.length > 0 && (() => {
+              const urgent = expiringContractsList.filter(ec => Math.ceil((ec.endDate.getTime() - Date.now()) / 86400000) <= 30).length;
+              const soonest = expiringContractsList[0];
+              const soonestDays = Math.ceil((soonest.endDate.getTime() - Date.now()) / 86400000);
+              return (
+                <div className="alert" style={{marginBottom:"24px"}}>
+                  <span style={{fontSize:22}}>⚠️</span>
+                  <div style={{flex:1}}>
+                    <div className="alert-title">
+                      มี {expiringContractsList.length} สัญญาที่จะหมดอายุภายใน 90 วัน
+                      {urgent > 0 && <span style={{marginLeft:"10px",background:"#DC2626",color:"white",fontSize:"11px",padding:"1px 8px",borderRadius:"99px",fontWeight:700}}>{urgent} เร่งด่วน ≤30วัน</span>}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <div className="alert-sub">
+                      ใกล้สุด: {soonest.contractNo} — {soonest.customer.companyName} เหลือ {soonestDays} วัน ({soonest.endDate.toLocaleDateString("th-TH")})
+                    </div>
+                  </div>
+                  <a href="/contracts?sort=endDate&order=asc&status=ACTIVE" className="alert-btn">ดูทั้งหมด →</a>
+                </div>
+              );
+            })()}
 
             <div className="kpi-grid">
               {kpis.map((k) => (
