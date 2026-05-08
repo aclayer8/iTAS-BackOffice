@@ -22,9 +22,9 @@ export default async function CustomersPage() {
           <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>Customer Management</h1>
           <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{customers.length} customers in system</p>
         </div>
-        <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>
+        <Link href="/customers/new" style={{ backgroundColor: "#1E3A5F", color: "white", padding: "10px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: "bold", textDecoration: "none" }}>
           + New Customer
-        </button>
+        </Link>
       </div>
 
       <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>

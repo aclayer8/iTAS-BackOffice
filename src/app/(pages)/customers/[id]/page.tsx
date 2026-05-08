@@ -59,9 +59,14 @@ export default async function CustomerDetailPage({
               </span>
             )}
           </div>
-          <span style={{ backgroundColor: "#10b98120", color: "#10b981", padding: "4px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 700 }}>
-            {customer.status}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ backgroundColor: "#10b98120", color: "#10b981", padding: "4px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 700 }}>
+              {customer.status}
+            </span>
+            <Link href={`/customers/${customer.id}/edit`} style={{ backgroundColor: "#f1f5f9", color: "#1E3A5F", border: "1px solid #e2e8f0", padding: "6px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>
+              Edit
+            </Link>
+          </div>
         </div>
 
         {/* Info grid */}
