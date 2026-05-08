@@ -207,7 +207,18 @@ export function parseSheet(
     const val = colDValue(row);
 
     if (!custName && labelCell.toLowerCase().includes("name")) {
-      custName = val || cellStr(row[8]) || ""; // some sheets have value in col I
+      // Try col D first, then scan all columns for first non-label non-empty value
+      if (val) {
+        custName = val;
+      } else {
+        for (let c = 2; c < row.length; c++) {
+          const v = cellStr(row[c]);
+          if (v && !v.toLowerCase().includes("name") && v !== ":") {
+            custName = v;
+            break;
+          }
+        }
+      }
     }
     if (!custAddress && labelCell.toLowerCase().includes("address")) {
       custAddress = val;
