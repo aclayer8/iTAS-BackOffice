@@ -39,3 +39,12 @@ Thumbs.db
 # Vercel / Cloudflare
 .vercel
 .wrangler/
+
+# Agent Skills (Claude Cowork)
+agent-skills/
+
+# Sample Data
+SampleData/
+
+# Claude session files
+.claude/

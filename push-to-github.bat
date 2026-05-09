@@ -13,5 +13,5 @@ echo [3/3] Pushing...
 git push origin main --force
 
 echo.
-echo Done! Cloudflare will rebuild automatically.
+echo Done! Website will rebuild automatically.
 pause
