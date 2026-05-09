@@ -542,7 +542,3 @@ function PrintPreview({ form, customer, items, onBack, onSave, saving, onExcel }
     </div>
   );
 }
-
-}
-
-}
