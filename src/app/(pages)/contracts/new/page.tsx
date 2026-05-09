@@ -125,7 +125,7 @@ function NewContractForm() {
     fetch("/api/customers?limit=500")
       .then(r => r.json())
       .then(d => {
-        const list: Customer[] = d.data ?? [];
+        const list: Customer[] = d.data?.data ?? [];
         setCustomers(list);
         // Pre-select customer if customerId was passed in URL
         if (presetCustomerId) {
@@ -541,4 +541,8 @@ function PrintPreview({ form, customer, items, onBack, onSave, saving, onExcel }
       <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
     </div>
   );
+}
+
+}
+
 }

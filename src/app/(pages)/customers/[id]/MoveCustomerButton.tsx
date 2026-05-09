@@ -19,7 +19,7 @@ export default function MoveCustomerButton({ sourceId, sourceName }: { sourceId:
     if (open) {
       fetch("/api/customers?limit=500")
         .then(r => r.json())
-        .then(d => setCustomers((d.data ?? []).filter((c: Customer) => c.id !== sourceId)));
+        .then(d => setCustomers((d.data?.data ?? []).filter((c: Customer) => c.id !== sourceId)));
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
       setSearch(""); setSelected(null); setPreview(null);
