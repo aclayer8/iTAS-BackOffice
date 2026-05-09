@@ -11,22 +11,20 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
 
   const sessionUser = session.user as { id?: string; name?: string; email?: string; role?: string };
-  const userName  = sessionUser.name  ?? "User";
-  const userEmail = sessionUser.email ?? "";
-  const userRole  = sessionUser.role  ?? "VIEWER";
+  const userName   = sessionUser.name  ?? "User";
+  const userEmail  = sessionUser.email ?? "";
+  const userRole   = sessionUser.role  ?? "VIEWER";
   const userInitial = userName.charAt(0).toUpperCase();
 
-  const now   = new Date();
-  const in90  = new Date(Date.now() + 90 * 86400000);
+  const now  = new Date();
+  const in90 = new Date(Date.now() + 90 * 86400000);
 
   const [activeContracts, totalAssets, totalCustomers, expiringAssets, expiringContractsList] =
     await Promise.all([
       prisma.contract.count({ where: { status: "ACTIVE", deletedAt: null } }),
       prisma.asset.count({ where: { deletedAt: null } }),
       prisma.customer.count({ where: { status: "ACTIVE", deletedAt: null } }),
-      prisma.asset.count({
-        where: { deletedAt: null, warrantyEnd: { gte: now, lte: in90 } },
-      }),
+      prisma.asset.count({ where: { deletedAt: null, warrantyEnd: { gte: now, lte: in90 } } }),
       prisma.contract.findMany({
         where: { deletedAt: null, status: "ACTIVE", endDate: { gte: now, lte: in90 } },
         orderBy: { endDate: "asc" },
@@ -41,36 +39,36 @@ export default async function DashboardPage() {
   });
 
   const navItems = [
-    { icon: "\u229E", label: "Dashboard",   href: "/dashboard", active: true  },
-    { icon: "\uD83D\uDCC4", label: "Contracts",   href: "/contracts", active: false },
-    { icon: "\uD83D\uDDA5\uFE0F",label: "Assets",      href: "/assets",    active: false },
-    { icon: "\uD83C\uDFE2", label: "Customers",   href: "/customers", active: false },
-    { icon: "\uD83D\uDCE5", label: "Import Data", href: "/import",    active: false },
-    { icon: "\uD83D\uDD0D", label: "Search",      href: "/search",    active: false },
-    { icon: "\uD83D\uDD11", label: "Licenses",    href: "/licenses",  active: false },
-    { icon: "\uD83D\uDCCA", label: "Reports",     href: "/api/reports/contracts?format=xlsx", active: false },
+    { icon: "⊞", label: "Dashboard",   href: "/dashboard", active: true  },
+    { icon: "📄", label: "Contracts",   href: "/contracts", active: false },
+    { icon: "🖥️", label: "Assets", href: "/assets",   active: false },
+    { icon: "🏢", label: "Customers",   href: "/customers", active: false },
+    { icon: "📥", label: "Import Data", href: "/import",    active: false },
+    { icon: "🔍", label: "Search",      href: "/search",    active: false },
+    { icon: "🔑", label: "Licenses",    href: "/licenses",  active: false },
+    { icon: "📊", label: "Reports",     href: "/api/reports/contracts?format=xlsx", active: false },
   ];
 
   const kpis = [
-    { label:"Active Contracts", value:activeContracts, sub:"\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E17\u0E35\u0E48 active",   icon:"\uD83D\uDCC4", color:"#2563EB", bg:"#EFF6FF", href:"/contracts", change:"+2 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49" },
-    { label:"Total Assets",     value:totalAssets,     sub:"\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",   icon:"\uD83D\uDDA5\uFE0F",color:"#7C3AED", bg:"#F5F3FF", href:"/assets",    change:"+12 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49" },
-    { label:"Customers",        value:totalCustomers,  sub:"\u0E25\u0E39\u0E01\u0E04\u0E49\u0E32\u0E17\u0E35\u0E48\u0E14\u0E39\u0E41\u0E25\u0E2D\u0E22\u0E39\u0E48",icon:"\uD83C\uDFE2", color:"#059669", bg:"#ECFDF5", href:"/customers", change:"+1 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49" },
-    { label:"Expiring 90d",     value:expiringAssets,  sub:"\u0E43\u0E01\u0E25\u0E49\u0E2B\u0E21\u0E14\u0E1B\u0E23\u0E30\u0E01\u0E31\u0E19",    icon:"\u26A0\uFE0F", color: expiringAssets>0?"#D97706":"#059669", bg:expiringAssets>0?"#FFFBEB":"#ECFDF5", href:"/assets", change:expiringAssets>0?"\u0E15\u0E49\u0E2D\u0E07\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23":"\u0E1B\u0E01\u0E15\u0E34\u0E14\u0E35" },
+    { label: "Active Contracts", value: activeContracts, sub: "สัญญาที่ active",    icon: "📄", color: "#2563EB", bg: "#EFF6FF", href: "/contracts", change: "+2 เดือนนี้"  },
+    { label: "Total Assets",     value: totalAssets,     sub: "อุปกรณ์ทั้งหมด",    icon: "🖥️", color: "#7C3AED", bg: "#F5F3FF", href: "/assets",    change: "+12 เดือนนี้" },
+    { label: "Customers",        value: totalCustomers,  sub: "ลูกค้าที่ดูแลอยู่", icon: "🏢", color: "#059669", bg: "#ECFDF5", href: "/customers", change: "+1 เดือนนี้"  },
+    { label: "Expiring 90d",     value: expiringAssets,  sub: "ใกล้หมดประกัน",     icon: "⚠️", color: expiringAssets > 0 ? "#D97706" : "#059669", bg: expiringAssets > 0 ? "#FFFBEB" : "#ECFDF5", href: "/assets", change: expiringAssets > 0 ? "ต้องดำเนินการ" : "ปกติดี" },
   ];
 
   const quickLinks = [
-    { label:"Import \u0E08\u0E32\u0E01 Excel",    desc:"\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E2B\u0E21\u0E48",        href:"/import",    icon:"\uD83D\uDCE5", color:"#2563EB" },
-    { label:"\u0E04\u0E49\u0E19\u0E2B\u0E32 Serial / Asset",desc:"\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E02\u0E49\u0E32\u0E21\u0E17\u0E38\u0E01 module",      href:"/search",    icon:"\uD83D\uDD0D", color:"#7C3AED" },
-    { label:"\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",        desc:`${activeContracts} active`,href:"/contracts", icon:"\uD83D\uDCC4", color:"#059669" },
-    { label:"\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C IT",           desc:`${totalAssets} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23`,   href:"/assets",    icon:"\uD83D\uDDA5\uFE0F",color:"#DC2626" },
-    { label:"\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E25\u0E39\u0E01\u0E04\u0E49\u0E32",         desc:`${totalCustomers} \u0E23\u0E32\u0E22`,   href:"/customers", icon:"\uD83C\uDFE2", color:"#0891B2" },
-    { label:"Export \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19",        desc:"\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E42\u0E2B\u0E25\u0E14 Excel",         href:"/api/reports/contracts?format=xlsx", icon:"\uD83D\uDCCA", color:"#D97706" },
+    { label: "Import จาก Excel",     desc: "นำเข้าข้อมูลใหม่",         href: "/import",    icon: "📥", color: "#2563EB" },
+    { label: "ค้นหา Serial / Asset", desc: "ค้นหาข้ามทุก module",       href: "/search",    icon: "🔍", color: "#7C3AED" },
+    { label: "สัญญาทั้งหมด",         desc: `${activeContracts} active`, href: "/contracts", icon: "📄", color: "#059669" },
+    { label: "อุปกรณ์ IT",            desc: `${totalAssets} รายการ`,    href: "/assets",    icon: "🖥️", color: "#DC2626" },
+    { label: "ข้อมูลลูกค้า",          desc: `${totalCustomers} ราย`,    href: "/customers", icon: "🏢", color: "#0891B2" },
+    { label: "Export รายงาน",         desc: "ดาวน์โหลด Excel",          href: "/api/reports/contracts?format=xlsx", icon: "📊", color: "#D97706" },
   ];
 
   const css = `
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;background:#F1F5F9;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
-    .shell{display:flex;min-height:100vh;background:#F1F5F9}
+    .shell{display:flex;min-height:100vh}
     .sidebar{width:240px;flex-shrink:0;background:#0F172A;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;border-right:1px solid rgba(255,255,255,0.06)}
     .sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,0.07)}
     .sidebar-logo-box{background:white;border-radius:10px;padding:8px 10px;display:inline-flex;align-items:center}
@@ -82,8 +80,8 @@ export default async function DashboardPage() {
     .sidebar-footer{margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.07)}
     .sidebar-user{display:flex;align-items:center;gap:10px}
     .sidebar-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#D41E28,#ef4444);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;flex-shrink:0}
-    .u-name{font-size:13px;font-weight:600;color:#E2E8F0}
-    .u-role{font-size:11px;color:#64748B}
+    .u-name{font-size:13px;font-weight:600;color:#E2E8F0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .u-role{font-size:11px;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .main-area{margin-left:240px;flex:1;display:flex;flex-direction:column;min-height:100vh}
     .topbar{background:white;border-bottom:1px solid #E2E8F0;height:64px;padding:0 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
     .bc{font-size:13px;color:#94A3B8}
@@ -119,7 +117,7 @@ export default async function DashboardPage() {
     .card-title{font-size:18px;font-weight:700;color:#0F172A;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
     .card-badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:99px;background:#F1F5F9;color:#64748B}
     .ql-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    .ql-item{display:flex;align-items:center;gap:14px;padding:16px 16px;border-radius:10px;border:1.5px solid #F1F5F9;background:#FAFAFA;text-decoration:none;transition:border-color .15s,background .15s,transform .15s}
+    .ql-item{display:flex;align-items:center;gap:14px;padding:16px;border-radius:10px;border:1.5px solid #F1F5F9;background:#FAFAFA;text-decoration:none;transition:border-color .15s,background .15s,transform .15s}
     .ql-item:hover{border-color:#CBD5E1;background:white;transform:translateX(2px);box-shadow:0 2px 8px rgba(0,0,0,0.05)}
     .ql-icon{width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
     .ql-name{font-size:16px;font-weight:600;color:#1E293B}
@@ -142,7 +140,7 @@ export default async function DashboardPage() {
         <aside className="sidebar">
           <div className="sidebar-logo">
             <div className="sidebar-logo-box">
-              <Image src="/itas-logo.png" alt="iTAS Solutions" width={120} height={44} style={{objectFit:"contain",display:"block"}} priority />
+              <Image src="/itas-logo.png" alt="iTAS Solutions" width={120} height={44} style={{ objectFit: "contain", display: "block" }} priority />
             </div>
           </div>
           <div className="section-label">Main Menu</div>
@@ -157,9 +155,9 @@ export default async function DashboardPage() {
           <div className="sidebar-footer">
             <div className="sidebar-user">
               <div className="sidebar-avatar">{userInitial}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div className="u-name" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{userName}</div>
-                <div className="u-role" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{userRole}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="u-name">{userName}</div>
+                <div className="u-role">{userRole}</div>
               </div>
             </div>
             <LogoutButton />
@@ -168,13 +166,13 @@ export default async function DashboardPage() {
 
         <div className="main-area">
           <header className="topbar">
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span className="bc">iTAS BackOffice / </span>
               <span className="bc-cur">Dashboard</span>
             </div>
             <form method="GET" action="/search" className="tsearch">
-              <span style={{fontSize:16,color:"#94A3B8"}}>&#128269;</span>
-              <input name="q" placeholder="\u0E04\u0E49\u0E19\u0E2B\u0E32 Serial, \u0E25\u0E39\u0E01\u0E04\u0E49\u0E32, Asset Code..." />
+              <span style={{ fontSize: 16, color: "#94A3B8" }}>&#128269;</span>
+              <input name="q" placeholder="ค้นหา Serial, ลูกค้า, Asset Code..." />
             </form>
             <div className="topbar-right">
               <div className="live-badge"><span className="live-dot" />System Online</div>
@@ -187,22 +185,28 @@ export default async function DashboardPage() {
             <div className="page-date">{today}</div>
 
             {expiringContractsList.length > 0 && (() => {
-              const urgent = expiringContractsList.filter(ec => Math.ceil((ec.endDate.getTime() - Date.now()) / 86400000) <= 30).length;
+              const urgent = expiringContractsList.filter(
+                (ec) => Math.ceil((ec.endDate.getTime() - Date.now()) / 86400000) <= 30
+              ).length;
               const soonest = expiringContractsList[0];
               const soonestDays = Math.ceil((soonest.endDate.getTime() - Date.now()) / 86400000);
               return (
-                <div className="alert" style={{marginBottom:"24px"}}>
-                  <span style={{fontSize:22}}>&#9888;&#65039;</span>
-                  <div style={{flex:1}}>
+                <div className="alert">
+                  <span style={{ fontSize: 22 }}>&#9888;&#65039;</span>
+                  <div style={{ flex: 1 }}>
                     <div className="alert-title">
-                      \u0E21\u0E35 {expiringContractsList.length} \u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E17\u0E35\u0E48\u0E08\u0E30\u0E2B\u0E21\u0E14\u0E2D\u0E32\u0E22\u0E38\u0E20\u0E32\u0E22\u0E43\u0E19 90 \u0E27\u0E31\u0E19
-                      {urgent > 0 && <span style={{marginLeft:"10px",background:"#DC2626",color:"white",fontSize:"11px",padding:"1px 8px",borderRadius:"99px",fontWeight:700}}>{urgent} \u0E40\u0E23\u0E48\u0E07\u0E14\u0E48\u0E27\u0E19 &#8804;30\u0E27\u0E31\u0E19</span>}
+                      {"มี "}{expiringContractsList.length}{" สัญญาที่จะหมดอายุภายใน 90 วัน"}
+                      {urgent > 0 && (
+                        <span style={{ marginLeft: 10, background: "#DC2626", color: "white", fontSize: 11, padding: "1px 8px", borderRadius: 99, fontWeight: 700 }}>
+                          {urgent}{" เร่งด่วน ≤30วัน"}
+                        </span>
+                      )}
                     </div>
                     <div className="alert-sub">
-                      \u0E43\u0E01\u0E25\u0E49\u0E2A\u0E38\u0E14: {soonest.contractNo} &#8212; {soonest.customer.companyName} \u0E40\u0E2B\u0E25\u0E37\u0E2D {soonestDays} \u0E27\u0E31\u0E19 ({soonest.endDate.toLocaleDateString("th-TH")})
+                      {"ใกล้สุด: "}{soonest.contractNo}{" — "}{soonest.customer.companyName}{" เหลือ "}{soonestDays}{" วัน ("}{soonest.endDate.toLocaleDateString("th-TH")}{")"}
                     </div>
                   </div>
-                  <a href="/contracts?sort=endDate&order=asc&status=ACTIVE" className="alert-btn">\u0E14\u0E39\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 &#8594;</a>
+                  <a href="/contracts?sort=endDate&order=asc&status=ACTIVE" className="alert-btn">ดูทั้งหมด &#8594;</a>
                 </div>
               );
             })()}
@@ -211,13 +215,13 @@ export default async function DashboardPage() {
               {kpis.map((k) => (
                 <a key={k.label} href={k.href} className="kpi-card">
                   <div className="kpi-top">
-                    <div className="kpi-icon" style={{background:k.bg}}>{k.icon}</div>
-                    <span className="kpi-change" style={{background:k.bg,color:k.color}}>{k.change}</span>
+                    <div className="kpi-icon" style={{ background: k.bg }}>{k.icon}</div>
+                    <span className="kpi-change" style={{ background: k.bg, color: k.color }}>{k.change}</span>
                   </div>
-                  <div className="kpi-value" style={{color:k.color}}>{k.value.toLocaleString()}</div>
+                  <div className="kpi-value" style={{ color: k.color }}>{k.value.toLocaleString()}</div>
                   <div className="kpi-label">{k.label}</div>
                   <div className="kpi-sub">{k.sub}</div>
-                  <div className="kpi-bar" style={{background:"linear-gradient(90deg,"+k.color+"40,"+k.color+"10)"}} />
+                  <div className="kpi-bar" style={{ background: `linear-gradient(90deg,${k.color}40,${k.color}10)` }} />
                 </a>
               ))}
             </div>
@@ -231,7 +235,7 @@ export default async function DashboardPage() {
                 <div className="ql-grid">
                   {quickLinks.map((q) => (
                     <a key={q.label} href={q.href} className="ql-item">
-                      <div className="ql-icon" style={{background:q.color+"18"}}>{q.icon}</div>
+                      <div className="ql-icon" style={{ background: q.color + "18" }}>{q.icon}</div>
                       <div>
                         <div className="ql-name">{q.label}</div>
                         <div className="ql-desc">{q.desc}</div>
@@ -244,19 +248,19 @@ export default async function DashboardPage() {
               <div className="card">
                 <div className="card-title">System Status</div>
                 {[
-                  {key:"Database",           val:"Connected",                dot:"#10B981",vc:"#059669"},
-                  {key:"Active Contracts",   val:activeContracts+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", dot:"#3B82F6",vc:"#2563EB"},
-                  {key:"Total Assets",       val:totalAssets+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",     dot:"#8B5CF6",vc:"#7C3AED"},
-                  {key:"Customers",          val:totalCustomers+" \u0E23\u0E32\u0E22",     dot:"#10B981",vc:"#059669"},
-                  {key:"Expiring (90d)",     val:expiringAssets+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",  dot:expiringAssets>0?"#F59E0B":"#10B981",vc:expiringAssets>0?"#D97706":"#059669"},
-                  {key:"Contracts Expiring", val:expiringContracts+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",dot:expiringContracts>0?"#EF4444":"#10B981",vc:expiringContracts>0?"#DC2626":"#059669"},
+                  { key: "Database",           val: "Connected",                         dot: "#10B981", vc: "#059669" },
+                  { key: "Active Contracts",   val: `${activeContracts} รายการ`,         dot: "#3B82F6", vc: "#2563EB" },
+                  { key: "Total Assets",       val: `${totalAssets} รายการ`,             dot: "#8B5CF6", vc: "#7C3AED" },
+                  { key: "Customers",          val: `${totalCustomers} ราย`,             dot: "#10B981", vc: "#059669" },
+                  { key: "Expiring (90d)",     val: `${expiringAssets} รายการ`,          dot: expiringAssets > 0 ? "#F59E0B" : "#10B981", vc: expiringAssets > 0 ? "#D97706" : "#059669" },
+                  { key: "Contracts Expiring", val: `${expiringContracts} รายการ`,       dot: expiringContracts > 0 ? "#EF4444" : "#10B981", vc: expiringContracts > 0 ? "#DC2626" : "#059669" },
                 ].map((s) => (
                   <div key={s.key} className="status-row">
                     <div className="s-left">
-                      <div className="s-dot" style={{background:s.dot}} />
+                      <div className="s-dot" style={{ background: s.dot }} />
                       <span className="s-key">{s.key}</span>
                     </div>
-                    <span className="s-val" style={{color:s.vc}}>{s.val}</span>
+                    <span className="s-val" style={{ color: s.vc }}>{s.val}</span>
                   </div>
                 ))}
               </div>
