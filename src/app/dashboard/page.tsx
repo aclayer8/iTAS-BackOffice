@@ -1,11 +1,23 @@
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
+import LogoutButton from "./LogoutButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const now = new Date();
-  const in90 = new Date(Date.now() + 90*86400000);
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const sessionUser = session.user as { id?: string; name?: string; email?: string; role?: string };
+  const userName  = sessionUser.name  ?? "User";
+  const userEmail = sessionUser.email ?? "";
+  const userRole  = sessionUser.role  ?? "VIEWER";
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  const now   = new Date();
+  const in90  = new Date(Date.now() + 90 * 86400000);
 
   const [activeContracts, totalAssets, totalCustomers, expiringAssets, expiringContractsList] =
     await Promise.all([
@@ -29,37 +41,30 @@ export default async function DashboardPage() {
   });
 
   const navItems = [
-    { icon: "⊞", label: "Dashboard",   href: "/dashboard", active: true  },
-    { icon: "📄", label: "Contracts",   href: "/contracts", active: false },
-    { icon: "🖥️",label: "Assets",      href: "/assets",    active: false },
-    { icon: "🏢", label: "Customers",   href: "/customers", active: false },
-    { icon: "📥", label: "Import Data", href: "/import",    active: false },
-    { icon: "🔍", label: "Search",      href: "/search",    active: false },
-    { icon: "🔑", label: "Licenses",    href: "/licenses",  active: false },
-    { icon: "📊", label: "Reports",     href: "/api/reports/contracts?format=xlsx", active: false },
+    { icon: "\u229E", label: "Dashboard",   href: "/dashboard", active: true  },
+    { icon: "\uD83D\uDCC4", label: "Contracts",   href: "/contracts", active: false },
+    { icon: "\uD83D\uDDA5\uFE0F",label: "Assets",      href: "/assets",    active: false },
+    { icon: "\uD83C\uDFE2", label: "Customers",   href: "/customers", active: false },
+    { icon: "\uD83D\uDCE5", label: "Import Data", href: "/import",    active: false },
+    { icon: "\uD83D\uDD0D", label: "Search",      href: "/search",    active: false },
+    { icon: "\uD83D\uDD11", label: "Licenses",    href: "/licenses",  active: false },
+    { icon: "\uD83D\uDCCA", label: "Reports",     href: "/api/reports/contracts?format=xlsx", active: false },
   ];
 
   const kpis = [
-    { label:"Active Contracts", value:activeContracts, sub:"สัญญาที่ active",   icon:"📄", color:"#2563EB", bg:"#EFF6FF", href:"/contracts", change:"+2 เดือนนี้" },
-    { label:"Total Assets",     value:totalAssets,     sub:"อุปกรณ์ทั้งหมด",   icon:"🖥️",color:"#7C3AED", bg:"#F5F3FF", href:"/assets",    change:"+12 เดือนนี้" },
-    { label:"Customers",        value:totalCustomers,  sub:"ลูกค้าที่ดูแลอยู่",icon:"🏢", color:"#059669", bg:"#ECFDF5", href:"/customers", change:"+1 เดือนนี้" },
-    { label:"Expiring 90d",     value:expiringAssets,  sub:"ใกล้หมดประกัน",    icon:"⚠️", color: expiringAssets>0?"#D97706":"#059669", bg:expiringAssets>0?"#FFFBEB":"#ECFDF5", href:"/assets", change:expiringAssets>0?"ต้องดำเนินการ":"ปกติดี" },
+    { label:"Active Contracts", value:activeContracts, sub:"\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E17\u0E35\u0E48 active",   icon:"\uD83D\uDCC4", color:"#2563EB", bg:"#EFF6FF", href:"/contracts", change:"+2 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49" },
+    { label:"Total Assets",     value:totalAssets,     sub:"\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",   icon:"\uD83D\uDDA5\uFE0F",color:"#7C3AED", bg:"#F5F3FF", href:"/assets",    change:"+12 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49" },
+    { label:"Customers",        value:totalCustomers,  sub:"\u0E25\u0E39\u0E01\u0E04\u0E49\u0E32\u0E17\u0E35\u0E48\u0E14\u0E39\u0E41\u0E25\u0E2D\u0E22\u0E39\u0E48",icon:"\uD83C\uDFE2", color:"#059669", bg:"#ECFDF5", href:"/customers", change:"+1 \u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49" },
+    { label:"Expiring 90d",     value:expiringAssets,  sub:"\u0E43\u0E01\u0E25\u0E49\u0E2B\u0E21\u0E14\u0E1B\u0E23\u0E30\u0E01\u0E31\u0E19",    icon:"\u26A0\uFE0F", color: expiringAssets>0?"#D97706":"#059669", bg:expiringAssets>0?"#FFFBEB":"#ECFDF5", href:"/assets", change:expiringAssets>0?"\u0E15\u0E49\u0E2D\u0E07\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23":"\u0E1B\u0E01\u0E15\u0E34\u0E14\u0E35" },
   ];
 
   const quickLinks = [
-    { label:"Import จาก Excel",    desc:"นำเข้าข้อมูลใหม่",        href:"/import",    icon:"📥", color:"#2563EB" },
-    { label:"ค้นหา Serial / Asset",desc:"ค้นหาข้ามทุก module",      href:"/search",    icon:"🔍", color:"#7C3AED" },
-    { label:"สัญญาทั้งหมด",        desc:`${activeContracts} active`,href:"/contracts", icon:"📄", color:"#059669" },
-    { label:"อุปกรณ์ IT",           desc:`${totalAssets} รายการ`,   href:"/assets",    icon:"🖥️",color:"#DC2626" },
-    { label:"ข้อมูลลูกค้า",         desc:`${totalCustomers} ราย`,   href:"/customers", icon:"🏢", color:"#0891B2" },
-    { label:"Export รายงาน",        desc:"ดาวน์โหลด Excel",         href:"/api/reports/contracts?format=xlsx", icon:"📊", color:"#D97706" },
-  ];
-
-  const accounts = [
-    { role:"Admin",    email:"admin@itas.co.th",    pass:"Admin@1234!", color:"#DC2626", bg:"#FEF2F2" },
-    { role:"Sale",     email:"sale@itas.co.th",     pass:"Sale@1234!",  color:"#2563EB", bg:"#EFF6FF" },
-    { role:"Engineer", email:"engineer@itas.co.th", pass:"Eng@1234!",   color:"#059669", bg:"#ECFDF5" },
-    { role:"Viewer",   email:"viewer@itas.co.th",   pass:"View@1234!",  color:"#6B7280", bg:"#F9FAFB" },
+    { label:"Import \u0E08\u0E32\u0E01 Excel",    desc:"\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E2B\u0E21\u0E48",        href:"/import",    icon:"\uD83D\uDCE5", color:"#2563EB" },
+    { label:"\u0E04\u0E49\u0E19\u0E2B\u0E32 Serial / Asset",desc:"\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E02\u0E49\u0E32\u0E21\u0E17\u0E38\u0E01 module",      href:"/search",    icon:"\uD83D\uDD0D", color:"#7C3AED" },
+    { label:"\u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",        desc:`${activeContracts} active`,href:"/contracts", icon:"\uD83D\uDCC4", color:"#059669" },
+    { label:"\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C IT",           desc:`${totalAssets} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23`,   href:"/assets",    icon:"\uD83D\uDDA5\uFE0F",color:"#DC2626" },
+    { label:"\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E25\u0E39\u0E01\u0E04\u0E49\u0E32",         desc:`${totalCustomers} \u0E23\u0E32\u0E22`,   href:"/customers", icon:"\uD83C\uDFE2", color:"#0891B2" },
+    { label:"Export \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19",        desc:"\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E42\u0E2B\u0E25\u0E14 Excel",         href:"/api/reports/contracts?format=xlsx", icon:"\uD83D\uDCCA", color:"#D97706" },
   ];
 
   const css = `
@@ -125,13 +130,6 @@ export default async function DashboardPage() {
     .s-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
     .s-key{font-size:13px;color:#475569}
     .s-val{font-size:13px;font-weight:700}
-    .acc-table{width:100%;border-collapse:collapse}
-    .acc-table th{font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.8px;padding:0 0 10px;text-align:left;border-bottom:1px solid #F1F5F9}
-    .acc-table td{padding:10px 0;border-bottom:1px solid #F8FAFC;vertical-align:middle}
-    .acc-table tr:last-child td{border-bottom:none}
-    .role-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
-    .acc-email{font-size:12px;color:#64748B}
-    .acc-pass{font-size:12px;font-family:'Courier New',monospace;color:#1E293B;background:#F8FAFC;padding:3px 8px;border-radius:6px;border:1px solid #E2E8F0}
     .page-footer{text-align:center;margin-top:36px;font-size:12px;color:#CBD5E1;padding-bottom:12px}
     @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}}
     @media(max-width:768px){.sidebar{width:200px}.main-area{margin-left:200px}.tsearch{display:none}.content{padding:20px}}
@@ -158,12 +156,13 @@ export default async function DashboardPage() {
           </nav>
           <div className="sidebar-footer">
             <div className="sidebar-user">
-              <div className="sidebar-avatar">A</div>
-              <div>
-                <div className="u-name">Admin</div>
-                <div className="u-role">admin@itas.co.th</div>
+              <div className="sidebar-avatar">{userInitial}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div className="u-name" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{userName}</div>
+                <div className="u-role" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{userRole}</div>
               </div>
             </div>
+            <LogoutButton />
           </div>
         </aside>
 
@@ -174,12 +173,12 @@ export default async function DashboardPage() {
               <span className="bc-cur">Dashboard</span>
             </div>
             <form method="GET" action="/search" className="tsearch">
-              <span style={{fontSize:16,color:"#94A3B8"}}>🔍</span>
-              <input name="q" placeholder="ค้นหา Serial, ลูกค้า, Asset Code..." />
+              <span style={{fontSize:16,color:"#94A3B8"}}>&#128269;</span>
+              <input name="q" placeholder="\u0E04\u0E49\u0E19\u0E2B\u0E32 Serial, \u0E25\u0E39\u0E01\u0E04\u0E49\u0E32, Asset Code..." />
             </form>
             <div className="topbar-right">
               <div className="live-badge"><span className="live-dot" />System Online</div>
-              <div className="top-avatar">A</div>
+              <div className="top-avatar" title={userEmail}>{userInitial}</div>
             </div>
           </header>
 
@@ -193,17 +192,17 @@ export default async function DashboardPage() {
               const soonestDays = Math.ceil((soonest.endDate.getTime() - Date.now()) / 86400000);
               return (
                 <div className="alert" style={{marginBottom:"24px"}}>
-                  <span style={{fontSize:22}}>⚠️</span>
+                  <span style={{fontSize:22}}>&#9888;&#65039;</span>
                   <div style={{flex:1}}>
                     <div className="alert-title">
-                      มี {expiringContractsList.length} สัญญาที่จะหมดอายุภายใน 90 วัน
-                      {urgent > 0 && <span style={{marginLeft:"10px",background:"#DC2626",color:"white",fontSize:"11px",padding:"1px 8px",borderRadius:"99px",fontWeight:700}}>{urgent} เร่งด่วน ≤30วัน</span>}
+                      \u0E21\u0E35 {expiringContractsList.length} \u0E2A\u0E31\u0E0D\u0E0D\u0E32\u0E17\u0E35\u0E48\u0E08\u0E30\u0E2B\u0E21\u0E14\u0E2D\u0E32\u0E22\u0E38\u0E20\u0E32\u0E22\u0E43\u0E19 90 \u0E27\u0E31\u0E19
+                      {urgent > 0 && <span style={{marginLeft:"10px",background:"#DC2626",color:"white",fontSize:"11px",padding:"1px 8px",borderRadius:"99px",fontWeight:700}}>{urgent} \u0E40\u0E23\u0E48\u0E07\u0E14\u0E48\u0E27\u0E19 &#8804;30\u0E27\u0E31\u0E19</span>}
                     </div>
                     <div className="alert-sub">
-                      ใกล้สุด: {soonest.contractNo} — {soonest.customer.companyName} เหลือ {soonestDays} วัน ({soonest.endDate.toLocaleDateString("th-TH")})
+                      \u0E43\u0E01\u0E25\u0E49\u0E2A\u0E38\u0E14: {soonest.contractNo} &#8212; {soonest.customer.companyName} \u0E40\u0E2B\u0E25\u0E37\u0E2D {soonestDays} \u0E27\u0E31\u0E19 ({soonest.endDate.toLocaleDateString("th-TH")})
                     </div>
                   </div>
-                  <a href="/contracts?sort=endDate&order=asc&status=ACTIVE" className="alert-btn">ดูทั้งหมด →</a>
+                  <a href="/contracts?sort=endDate&order=asc&status=ACTIVE" className="alert-btn">\u0E14\u0E39\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 &#8594;</a>
                 </div>
               );
             })()}
@@ -242,44 +241,24 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              <div style={{display:"flex",flexDirection:"column",gap:20}}>
-                <div className="card">
-                  <div className="card-title">System Status</div>
-                  {[
-                    {key:"Database",           val:"Connected",               dot:"#10B981",vc:"#059669"},
-                    {key:"Active Contracts",   val:activeContracts+" รายการ", dot:"#3B82F6",vc:"#2563EB"},
-                    {key:"Total Assets",       val:totalAssets+" รายการ",     dot:"#8B5CF6",vc:"#7C3AED"},
-                    {key:"Customers",          val:totalCustomers+" ราย",     dot:"#10B981",vc:"#059669"},
-                    {key:"Expiring (90d)",     val:expiringAssets+" รายการ",  dot:expiringAssets>0?"#F59E0B":"#10B981",vc:expiringAssets>0?"#D97706":"#059669"},
-                    {key:"Contracts Expiring", val:expiringContracts+" รายการ",dot:expiringContracts>0?"#EF4444":"#10B981",vc:expiringContracts>0?"#DC2626":"#059669"},
-                  ].map((s) => (
-                    <div key={s.key} className="status-row">
-                      <div className="s-left">
-                        <div className="s-dot" style={{background:s.dot}} />
-                        <span className="s-key">{s.key}</span>
-                      </div>
-                      <span className="s-val" style={{color:s.vc}}>{s.val}</span>
+              <div className="card">
+                <div className="card-title">System Status</div>
+                {[
+                  {key:"Database",           val:"Connected",                dot:"#10B981",vc:"#059669"},
+                  {key:"Active Contracts",   val:activeContracts+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", dot:"#3B82F6",vc:"#2563EB"},
+                  {key:"Total Assets",       val:totalAssets+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",     dot:"#8B5CF6",vc:"#7C3AED"},
+                  {key:"Customers",          val:totalCustomers+" \u0E23\u0E32\u0E22",     dot:"#10B981",vc:"#059669"},
+                  {key:"Expiring (90d)",     val:expiringAssets+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",  dot:expiringAssets>0?"#F59E0B":"#10B981",vc:expiringAssets>0?"#D97706":"#059669"},
+                  {key:"Contracts Expiring", val:expiringContracts+" \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",dot:expiringContracts>0?"#EF4444":"#10B981",vc:expiringContracts>0?"#DC2626":"#059669"},
+                ].map((s) => (
+                  <div key={s.key} className="status-row">
+                    <div className="s-left">
+                      <div className="s-dot" style={{background:s.dot}} />
+                      <span className="s-key">{s.key}</span>
                     </div>
-                  ))}
-                </div>
-
-                <div className="card">
-                  <div className="card-title">Login Accounts</div>
-                  <table className="acc-table">
-                    <thead>
-                      <tr><th>Role</th><th>Email</th><th>Password</th></tr>
-                    </thead>
-                    <tbody>
-                      {accounts.map((a) => (
-                        <tr key={a.role}>
-                          <td><span className="role-chip" style={{background:a.bg,color:a.color,border:"1px solid "+a.color+"30"}}>{a.role}</span></td>
-                          <td><span className="acc-email">{a.email}</span></td>
-                          <td><span className="acc-pass">{a.pass}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    <span className="s-val" style={{color:s.vc}}>{s.val}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
