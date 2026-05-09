@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { serverError } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -88,6 +89,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[merge POST]", error);
-    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
+    return serverError(error);
   }
 }

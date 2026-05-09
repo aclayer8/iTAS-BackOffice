@@ -120,14 +120,18 @@ export const ROLE_COLORS: Record<UserRole, string> = {
 
 import { useSession } from "next-auth/react";
 
+type SessionUser = { role?: UserRole };
+
 export function usePermission(permission: Permission): boolean {
   const { data: session } = useSession();
-  if (!session?.user?.role) return false;
-  return hasPermission(session.user.role as UserRole, permission);
+  const role = (session?.user as SessionUser)?.role;
+  if (!role) return false;
+  return hasPermission(role, permission);
 }
 
 export function usePermissions(permissions: Permission[]): boolean {
   const { data: session } = useSession();
-  if (!session?.user?.role) return false;
-  return hasAnyPermission(session.user.role as UserRole, permissions);
+  const role = (session?.user as SessionUser)?.role;
+  if (!role) return false;
+  return hasAnyPermission(role, permissions);
 }

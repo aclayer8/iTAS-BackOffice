@@ -1,48 +1,71 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import {
+  withAuth,
+  ok,
+  created,
+  badRequest,
+  serverError,
+  parsePagination,
+  paginatedResponse,
+  notDeleted,
+} from "@/lib/api-helpers";
+import { CustomerSchema } from "@/utils/validators";
 import prisma from "@/lib/prisma";
 
+// GET /api/customers
 export async function GET(req: NextRequest) {
-  try {
-    const url = new URL(req.url);
-    const page  = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1", 10));
-    const limit = Math.min(100, parseInt(url.searchParams.get("limit") ?? "20", 10));
-    const search = url.searchParams.get("search") ?? "";
-    const skip = (page - 1) * limit;
+  return withAuth(req, async (req) => {
+    try {
+      const url = new URL(req.url);
+      const { skip, take, page, limit } = parsePagination(req);
+      const search = url.searchParams.get("search") ?? "";
 
-    const where = {
-      deletedAt: null,
-      ...(search ? {
-        OR: [
-          { companyName: { contains: search, mode: "insensitive" as const } },
-          { shortName:   { contains: search, mode: "insensitive" as const } },
-          { taxId:       { contains: search, mode: "insensitive" as const } },
-        ],
-      } : {}),
-    };
+      const where = {
+        ...notDeleted,
+        ...(search ? {
+          OR: [
+            { companyName: { contains: search, mode: "insensitive" as const } },
+            { shortName:   { contains: search, mode: "insensitive" as const } },
+            { taxId:       { contains: search, mode: "insensitive" as const } },
+          ],
+        } : {}),
+      };
 
-    const [data, total] = await Promise.all([
-      prisma.customer.findMany({
-        where, skip, take: limit,
-        orderBy: { companyName: "asc" },
-        include: {
-          _count: { select: { sites: true, contracts: true, assets: true } },
-        },
-      }),
-      prisma.customer.count({ where }),
-    ]);
+      const [data, total] = await Promise.all([
+        prisma.customer.findMany({
+          where, skip, take,
+          orderBy: { companyName: "asc" },
+          include: {
+            _count: { select: { sites: true, contracts: true, assets: true } },
+          },
+        }),
+        prisma.customer.count({ where }),
+      ]);
 
-    return NextResponse.json({ success: true, data, total, page, limit, totalPages: Math.ceil(total / limit) });
-  } catch (e) {
-    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
-  }
+      return ok(paginatedResponse(data, total, page, limit));
+    } catch (err) {
+      return serverError(err);
+    }
+  }, "customer:read");
 }
 
+// POST /api/customers
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const customer = await prisma.customer.create({ data: body });
-    return NextResponse.json({ success: true, data: customer }, { status: 201 });
-  } catch (e) {
-    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
-  }
+  return withAuth(req, async (req) => {
+    try {
+      const body = await req.json();
+      const parsed = CustomerSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return badRequest(
+          parsed.error.errors.map((e) => [e.path.join("."), e.message].join(": ")).join(", ")
+        );
+      }
+
+      const customer = await prisma.customer.create({ data: parsed.data as any });
+      return created(customer);
+    } catch (err) {
+      return serverError(err);
+    }
+  }, "customer:write");
 }

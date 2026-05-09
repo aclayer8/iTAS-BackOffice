@@ -1,38 +1,60 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import {
+  withAuth,
+  ok,
+  created,
+  badRequest,
+  serverError,
+  parsePagination,
+  paginatedResponse,
+  notDeleted,
+} from "@/lib/api-helpers";
+import { LicenseSchema } from "@/utils/validators";
 import prisma from "@/lib/prisma";
 
+// GET /api/licenses
 export async function GET(req: NextRequest) {
-  try {
-    const url = new URL(req.url);
-    const page  = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1", 10));
-    const limit = Math.min(100, parseInt(url.searchParams.get("limit") ?? "20", 10));
-    const skip  = (page - 1) * limit;
+  return withAuth(req, async (req) => {
+    try {
+      const { skip, take, page, limit } = parsePagination(req);
 
-    const [data, total] = await Promise.all([
-      prisma.license.findMany({
-        where: { deletedAt: null },
-        skip, take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          customer: { select: { id: true, companyName: true } },
-          site:     { select: { id: true, siteName: true } },
-        },
-      }),
-      prisma.license.count({ where: { deletedAt: null } }),
-    ]);
+      const [data, total] = await Promise.all([
+        prisma.license.findMany({
+          where: notDeleted,
+          skip, take,
+          orderBy: { createdAt: "desc" },
+          include: {
+            customer: { select: { id: true, companyName: true } },
+            site:     { select: { id: true, siteName: true } },
+          },
+        }),
+        prisma.license.count({ where: notDeleted }),
+      ]);
 
-    return NextResponse.json({ success: true, data, total, page, limit, totalPages: Math.ceil(total / limit) });
-  } catch (e) {
-    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
-  }
+      return ok(paginatedResponse(data, total, page, limit));
+    } catch (err) {
+      return serverError(err);
+    }
+  }, "license:read");
 }
 
+// POST /api/licenses
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const license = await prisma.license.create({ data: body });
-    return NextResponse.json({ success: true, data: license }, { status: 201 });
-  } catch (e) {
-    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
-  }
+  return withAuth(req, async (req) => {
+    try {
+      const body = await req.json();
+      const parsed = LicenseSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return badRequest(
+          parsed.error.errors.map((e) => [e.path.join("."), e.message].join(": ")).join(", ")
+        );
+      }
+
+      const license = await prisma.license.create({ data: parsed.data as any });
+      return created(license);
+    } catch (err) {
+      return serverError(err);
+    }
+  }, "license:write");
 }

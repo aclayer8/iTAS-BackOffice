@@ -5,6 +5,7 @@
 // =============================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { serverError } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
 import { parseCertificationWorkbook, ParsedItem } from "@/lib/excel-parser";
 import { generateAssetCode } from "@/lib/contract-number";
@@ -369,6 +370,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, summary, results });
   } catch (err) {
     console.error("[import/certification] Fatal error:", err);
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+    return serverError(err);
   }
 }

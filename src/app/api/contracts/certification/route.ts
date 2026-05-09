@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { serverError } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -135,6 +136,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, contractId: contract.id });
   } catch (error) {
     console.error("[certification POST]", error);
-    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
+    return serverError(error);
   }
 }

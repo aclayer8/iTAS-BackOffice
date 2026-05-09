@@ -1,33 +1,36 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withAuth, ok, badRequest, serverError } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function PATCH(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const { brand, model } = body as { brand?: string; model?: string };
+  return withAuth(req, async (req) => {
+    try {
+      const { id } = await params;
+      const body = await req.json();
+      const { brand, model } = body as { brand?: string; model?: string };
 
-    if (!brand && !model) {
-      return NextResponse.json({ error: "brand or model required" }, { status: 400 });
+      if (!brand && !model) {
+        return badRequest("brand or model required");
+      }
+
+      const asset = await prisma.asset.update({
+        where: { id },
+        data: {
+          ...(brand ? { brand: brand.trim() } : {}),
+          ...(model ? { model: model.trim() } : {}),
+        },
+        select: { id: true, brand: true, model: true },
+      });
+
+      return ok(asset);
+    } catch (err) {
+      return serverError(err);
     }
-
-    const asset = await prisma.asset.update({
-      where: { id },
-      data: {
-        ...(brand ? { brand: brand.trim() } : {}),
-        ...(model ? { model: model.trim() } : {}),
-      },
-      select: { id: true, brand: true, model: true },
-    });
-
-    return NextResponse.json({ success: true, asset });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
-  }
+  }, "asset:write");
 }

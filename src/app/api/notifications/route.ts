@@ -1,14 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withAuth, ok, serverError } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
-  try {
-    const notifications = await prisma.notification.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
-    return NextResponse.json({ success: true, data: notifications });
-  } catch (e) {
-    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
-  }
+// GET /api/notifications
+export async function GET(req: NextRequest) {
+  return withAuth(req, async () => {
+    try {
+      const notifications = await prisma.notification.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      });
+      return ok(notifications);
+    } catch (err) {
+      return serverError(err);
+    }
+  });
 }

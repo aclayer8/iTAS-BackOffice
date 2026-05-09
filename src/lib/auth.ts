@@ -120,9 +120,9 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export function generateSecurePassword(length = 16): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => chars[b % chars.length])
+    .join("");
 }
