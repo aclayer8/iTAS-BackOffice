@@ -12,6 +12,11 @@ function daysLeft(end: Date) {
   return Math.ceil((end.getTime() - Date.now()) / 86400000);
 }
 
+function effectiveContractStatus(status: string, endDate: Date) {
+  if (status === "ACTIVE" && daysLeft(endDate) < -30) return "EXPIRED";
+  return status;
+}
+
 type SortCol = "contractNo" | "customer" | "endDate" | "startDate" | "status" | "slaType";
 type SortOrder = "asc" | "desc";
 
@@ -31,10 +36,9 @@ export default async function ContractsPage({
   const status = params.status ?? "";
   const search = (params.search ?? "").trim();
 
-  const contracts = await prisma.contract.findMany({
+  const contractRows = await prisma.contract.findMany({
     where: {
       deletedAt: null,
-      ...(status ? { status: status as never } : {}),
       ...(search ? {
         OR: [
           { contractNo:  { contains: search, mode: "insensitive" as const } },
@@ -63,13 +67,14 @@ export default async function ContractsPage({
     },
   });
 
-  const counts = await prisma.contract.groupBy({
-    by: ["status"],
-    where: { deletedAt: null },
-    _count: { _all: true },
-  });
   const countMap: Record<string, number> = {};
-  counts.forEach((c) => { countMap[c.status] = c._count._all; });
+  contractRows.forEach((contract) => {
+    const effectiveStatus = effectiveContractStatus(contract.status, contract.endDate);
+    countMap[effectiveStatus] = (countMap[effectiveStatus] ?? 0) + 1;
+  });
+  const contracts = status
+    ? contractRows.filter((contract) => effectiveContractStatus(contract.status, contract.endDate) === status)
+    : contractRows;
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
@@ -86,30 +91,6 @@ export default async function ContractsPage({
           + New Contract
         </Link>
       </div>
-
-      <form action="/contracts" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px", background: "white", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
-        <input type="hidden" name="sort" value={col} />
-        <input type="hidden" name="order" value={order} />
-        {status && <input type="hidden" name="status" value={status} />}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0, border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "0 12px", height: "40px", background: "#f8fafc" }}>
-          <span style={{ color: "#94a3b8", fontSize: "14px" }}>Search</span>
-          <input
-            name="search"
-            defaultValue={search}
-            placeholder="Contract no, customer, SO/PO, serial, part no..."
-            style={{ width: "100%", minWidth: 0, border: 0, outline: 0, background: "transparent", fontSize: "14px", color: "#1e293b" }}
-            aria-label="Search contracts"
-          />
-        </div>
-        <button type="submit" style={{ height: "40px", padding: "0 16px", border: 0, borderRadius: "10px", background: "#1E3A5F", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
-          Search
-        </button>
-        {search && (
-          <Link href={`/contracts?sort=${col}&order=${order}${status ? `&status=${status}` : ""}`} style={{ height: "40px", display: "inline-flex", alignItems: "center", padding: "0 12px", borderRadius: "10px", border: "1px solid #e2e8f0", color: "#64748b", textDecoration: "none", fontSize: "13px", fontWeight: 700 }}>
-            Clear
-          </Link>
-        )}
-      </form>
 
       <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
         {[
@@ -143,6 +124,7 @@ export default async function ContractsPage({
               {[
                 { label: "Contract No", key: "contractNo" },
                 { label: "Customer",    key: "customer" },
+                { label: "Project Name",key: null },
                 { label: "Site",        key: null },
                 { label: "Vendor",      key: null },
                 { label: "SLA",         key: "slaType" },
@@ -178,6 +160,8 @@ export default async function ContractsPage({
             {contracts.map((c, i) => {
               const days = daysLeft(c.endDate);
               const dayColor = days < 0 ? "#ef4444" : days <= 30 ? "#f97316" : days <= 90 ? "#f59e0b" : "#10b981";
+              const displayStatus = effectiveContractStatus(c.status, c.endDate);
+              const projectName = c.serviceDesc?.trim() || "—";
               return (
                 <tr key={c.id} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "12px 16px", fontWeight: 700, fontFamily: "monospace" }}>
@@ -186,6 +170,11 @@ export default async function ContractsPage({
                     </Link>
                   </td>
                   <td style={{ padding: "12px 16px", fontWeight: 600 }}>{c.customer.companyName}</td>
+                  <td style={{ padding: "12px 16px", color: "#334155", fontSize: "13px", maxWidth: "260px" }}>
+                    <span title={projectName} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {projectName}
+                    </span>
+                  </td>
                   <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.site?.siteName ?? "—"}</td>
                   <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.vendor?.name ?? "—"}</td>
                   <td style={{ padding: "12px 16px", fontSize: "12px" }}>{c.slaType.replace(/_/g, " ")}</td>
@@ -198,8 +187,8 @@ export default async function ContractsPage({
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "center" }}>{c._count.items}</td>
                   <td style={{ padding: "12px 16px" }}>
-                    <span style={{ backgroundColor: STATUS_COLOR[c.status] + "20", color: STATUS_COLOR[c.status], padding: "2px 10px", borderRadius: "99px", fontSize: "12px", fontWeight: "bold" }}>
-                      {c.status}
+                    <span style={{ backgroundColor: STATUS_COLOR[displayStatus] + "20", color: STATUS_COLOR[displayStatus], padding: "2px 10px", borderRadius: "99px", fontSize: "12px", fontWeight: "bold" }}>
+                      {displayStatus}
                     </span>
                   </td>
                 </tr>
@@ -207,7 +196,7 @@ export default async function ContractsPage({
             })}
             {contracts.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
+                <td colSpan={11} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
                   No contracts found
                 </td>
               </tr>

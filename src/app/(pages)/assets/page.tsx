@@ -121,31 +121,6 @@ export default async function AssetsPage({
         </button>
       </div>
 
-      <form action="/assets" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px", background: "white", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
-        <input type="hidden" name="sort" value={col} />
-        <input type="hidden" name="order" value={order} />
-        {status && <input type="hidden" name="status" value={status} />}
-        {typeFilter && <input type="hidden" name="type" value={typeFilter} />}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0, border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "0 12px", height: "40px", background: "#f8fafc" }}>
-          <span style={{ color: "#94a3b8", fontSize: "14px" }}>Search</span>
-          <input
-            name="search"
-            defaultValue={search}
-            placeholder="Asset code, serial, brand, model, customer, rack..."
-            style={{ width: "100%", minWidth: 0, border: 0, outline: 0, background: "transparent", fontSize: "14px", color: "#1e293b" }}
-            aria-label="Search assets"
-          />
-        </div>
-        <button type="submit" style={{ height: "40px", padding: "0 16px", border: 0, borderRadius: "10px", background: "#1E3A5F", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
-          Search
-        </button>
-        {search && (
-          <Link href={`/assets?sort=${col}&order=${order}${status ? `&status=${status}` : ""}${typeFilter ? `&type=${typeFilter}` : ""}`} style={{ height: "40px", display: "inline-flex", alignItems: "center", padding: "0 12px", borderRadius: "10px", border: "1px solid #e2e8f0", color: "#64748b", textDecoration: "none", fontSize: "13px", fontWeight: 700 }}>
-            Clear
-          </Link>
-        )}
-      </form>
-
       {/* Warranty summary pills */}
       {(expiring30 > 0 || expiring90 > 0 || expired > 0) && (
         <div style={{ display: "flex", gap: "10px", marginBottom: "14px", flexWrap: "wrap" }}>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   BarChart3,
@@ -61,6 +61,7 @@ export default function AppShellClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -74,6 +75,13 @@ export default function AppShellClient({
 
   const userInitial = (user.name || user.email || "U").charAt(0).toUpperCase();
   const pageLabel = useMemo(() => getPageLabel(pathname), [pathname]);
+  const isLocalSearchPage = pathname.startsWith("/contracts") || pathname.startsWith("/assets");
+  const topSearchAction = isLocalSearchPage ? pathname : "/search";
+  const topSearchName = isLocalSearchPage ? "search" : "q";
+  const topSearchValue = searchParams.get(topSearchName) ?? "";
+  const preservedSearchParams = Array.from(searchParams.entries()).filter(
+    ([key]) => key !== "search" && key !== "q"
+  );
 
   return (
     <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
@@ -148,13 +156,24 @@ export default function AppShellClient({
             <strong>{pageLabel}</strong>
           </div>
 
-          <form method="GET" action="/search" className="app-top-search">
+          <form method="GET" action={topSearchAction} className="app-top-search">
+            {isLocalSearchPage &&
+              preservedSearchParams.map(([key, value]) => (
+                <input key={`${key}-${value}`} type="hidden" name={key} value={value} />
+              ))}
             <Search size={16} aria-hidden="true" />
             <input
-              name="q"
+              name={topSearchName}
               type="search"
-              placeholder="Search serial, customer, asset code..."
-              aria-label="Global search"
+              defaultValue={topSearchValue}
+              placeholder={
+                pathname.startsWith("/contracts")
+                  ? "Search contract, customer, project, serial..."
+                  : pathname.startsWith("/assets")
+                    ? "Search serial, customer, asset code..."
+                    : "Search serial, customer, asset code..."
+              }
+              aria-label={isLocalSearchPage ? `Search ${pageLabel}` : "Global search"}
             />
           </form>
 
