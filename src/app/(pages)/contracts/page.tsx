@@ -13,7 +13,9 @@ function daysLeft(end: Date) {
 }
 
 function effectiveContractStatus(status: string, endDate: Date) {
-  if (status === "ACTIVE" && daysLeft(endDate) < -30) return "EXPIRED";
+  const days = daysLeft(endDate);
+  if (status === "ACTIVE" && days < -30) return "EXPIRED";
+  if (status === "ACTIVE" && days < 0) return "PENDING_RENEWAL";
   return status;
 }
 
@@ -61,8 +63,6 @@ export default async function ContractsPage({
     orderBy: buildOrderBy(col, order),
     include: {
       customer: { select: { companyName: true } },
-      site:     { select: { siteName: true } },
-      vendor:   { select: { name: true } },
       _count:   { select: { items: true } },
     },
   });
@@ -125,8 +125,6 @@ export default async function ContractsPage({
                 { label: "Contract No", key: "contractNo" },
                 { label: "Customer",    key: "customer" },
                 { label: "Project Name",key: null },
-                { label: "Site",        key: null },
-                { label: "Vendor",      key: null },
                 { label: "SLA",         key: "slaType" },
                 { label: "Start",       key: "startDate" },
                 { label: "End",         key: "endDate" },
@@ -175,8 +173,6 @@ export default async function ContractsPage({
                       {projectName}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.site?.siteName ?? "—"}</td>
-                  <td style={{ padding: "12px 16px", color: "#6b7280", fontSize: "13px" }}>{c.vendor?.name ?? "—"}</td>
                   <td style={{ padding: "12px 16px", fontSize: "12px" }}>{c.slaType.replace(/_/g, " ")}</td>
                   <td style={{ padding: "12px 16px", fontSize: "13px" }}>{c.startDate.toLocaleDateString("en-GB")}</td>
                   <td style={{ padding: "12px 16px", fontSize: "13px" }}>{c.endDate.toLocaleDateString("en-GB")}</td>
@@ -196,7 +192,7 @@ export default async function ContractsPage({
             })}
             {contracts.length === 0 && (
               <tr>
-                <td colSpan={11} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
+                <td colSpan={9} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
                   No contracts found
                 </td>
               </tr>
