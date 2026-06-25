@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ContractItemsSlaEditor from "./ContractItemsSlaEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -67,9 +68,28 @@ export default async function ContractDetailPage({
       })
     : [];
 
-  const assetBySN = new Map(assets.map((a) => [a.serialNumber?.toLowerCase() ?? "", a]));
-
   const contractDays = daysLeft(contract.endDate);
+  const itemRows = contract.items.map((item) => ({
+    id: item.id,
+    itemType: item.itemType,
+    partNumber: item.partNumber,
+    description: item.description,
+    serialNumber: item.serialNumber,
+    quantity: item.quantity,
+    unit: item.unit,
+    startDate: item.startDate?.toISOString() ?? null,
+    endDate: item.endDate?.toISOString() ?? null,
+    sla: item.sla,
+    remark: item.remark,
+    sortOrder: item.sortOrder,
+  }));
+  const assetRows = assets.map((asset) => ({
+    assetCode: asset.assetCode,
+    serialNumber: asset.serialNumber,
+    brand: asset.brand,
+    model: asset.model,
+  }));
+  const assetBySN = new Map(assets.map((a) => [a.serialNumber?.toLowerCase() ?? "", a]));
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
@@ -137,8 +157,10 @@ export default async function ContractDetailPage({
         </div>
       </div>
 
+      <ContractItemsSlaEditor contractId={contract.id} items={itemRows} assets={assetRows} />
+
       {/* Items table */}
-      <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 4px rgba(0,0,0,.08)", overflow: "hidden" }}>
+      <div style={{ display: "none" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontWeight: 700, color: "#1E3A5F", fontSize: "17px" }}>
             📋 รายการ Items ({contract.items.length})
