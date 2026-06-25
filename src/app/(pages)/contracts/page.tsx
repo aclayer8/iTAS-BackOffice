@@ -19,8 +19,31 @@ function effectiveContractStatus(status: string, endDate: Date) {
   return status;
 }
 
-type SortCol = "contractNo" | "customer" | "endDate" | "startDate" | "status" | "slaType";
+function itemSlaSummary(items: { sla: string | null }[]) {
+  const slas = Array.from(
+    new Set(
+      items
+        .map((item) => item.sla?.trim())
+        .filter((sla): sla is string => Boolean(sla)),
+    ),
+  );
+
+  return slas.length > 0 ? slas.join(", ") : "—";
+}
+
+const SORT_COLUMNS = ["contractNo", "customer", "endDate", "startDate", "status"] as const;
+const SORT_ORDERS = ["asc", "desc"] as const;
+
+type SortCol = (typeof SORT_COLUMNS)[number];
 type SortOrder = "asc" | "desc";
+
+function parseSortCol(value: string | undefined): SortCol {
+  return SORT_COLUMNS.includes(value as SortCol) ? (value as SortCol) : "contractNo";
+}
+
+function parseSortOrder(value: string | undefined): SortOrder {
+  return SORT_ORDERS.includes(value as SortOrder) ? (value as SortOrder) : "desc";
+}
 
 function buildOrderBy(col: SortCol, order: SortOrder) {
   if (col === "customer") return { customer: { companyName: order } };
@@ -33,8 +56,8 @@ export default async function ContractsPage({
   searchParams: Promise<{ sort?: string; order?: string; status?: string; search?: string }>;
 }) {
   const params = await searchParams;
-  const col    = (params.sort  ?? "contractNo") as SortCol;
-  const order  = (params.order ?? "desc")       as SortOrder;
+  const col    = parseSortCol(params.sort);
+  const order  = parseSortOrder(params.order);
   const status = params.status ?? "";
   const search = (params.search ?? "").trim();
 
@@ -55,6 +78,7 @@ export default async function ContractsPage({
               { serialNumber: { contains: search, mode: "insensitive" as const } },
               { partNumber:   { contains: search, mode: "insensitive" as const } },
               { description:  { contains: search, mode: "insensitive" as const } },
+              { sla:          { contains: search, mode: "insensitive" as const } },
             ],
           } } },
         ],
@@ -63,6 +87,7 @@ export default async function ContractsPage({
     orderBy: buildOrderBy(col, order),
     include: {
       customer: { select: { companyName: true } },
+      items:    { select: { sla: true }, orderBy: { sortOrder: "asc" } },
       _count:   { select: { items: true } },
     },
   });
@@ -125,7 +150,7 @@ export default async function ContractsPage({
                 { label: "Contract No", key: "contractNo" },
                 { label: "Customer",    key: "customer" },
                 { label: "Project Name",key: null },
-                { label: "SLA",         key: "slaType" },
+                { label: "SLA",         key: null },
                 { label: "Start",       key: "startDate" },
                 { label: "End",         key: "endDate" },
                 { label: "Days Left",   key: null },
@@ -160,6 +185,7 @@ export default async function ContractsPage({
               const dayColor = days < 0 ? "#ef4444" : days <= 30 ? "#f97316" : days <= 90 ? "#f59e0b" : "#10b981";
               const displayStatus = effectiveContractStatus(c.status, c.endDate);
               const projectName = c.serviceDesc?.trim() || "—";
+              const itemSlas = itemSlaSummary(c.items);
               return (
                 <tr key={c.id} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "12px 16px", fontWeight: 700, fontFamily: "monospace" }}>
@@ -173,7 +199,11 @@ export default async function ContractsPage({
                       {projectName}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: "12px" }}>{c.slaType.replace(/_/g, " ")}</td>
+                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "#334155", maxWidth: "180px" }}>
+                    <span title={itemSlas} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {itemSlas}
+                    </span>
+                  </td>
                   <td style={{ padding: "12px 16px", fontSize: "13px" }}>{c.startDate.toLocaleDateString("en-GB")}</td>
                   <td style={{ padding: "12px 16px", fontSize: "13px" }}>{c.endDate.toLocaleDateString("en-GB")}</td>
                   <td style={{ padding: "12px 16px" }}>
