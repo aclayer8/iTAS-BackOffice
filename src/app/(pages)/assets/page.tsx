@@ -45,19 +45,33 @@ const COLUMNS: { label: string; key: SortCol | null }[] = [
 export default async function AssetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; order?: string; status?: string; type?: string }>;
+  searchParams: Promise<{ sort?: string; order?: string; status?: string; type?: string; search?: string }>;
 }) {
   const params  = await searchParams;
   const col     = (params.sort   ?? "warrantyEnd") as SortCol;
   const order   = (params.order  ?? "asc")         as SortOrder;
   const status  = params.status  ?? "";
   const typeFilter = params.type ?? "";
+  const search = (params.search ?? "").trim();
 
   const assets = await prisma.asset.findMany({
     where: {
       deletedAt: null,
       ...(status     ? { lifecycleStatus: status as never } : {}),
       ...(typeFilter ? { assetType:       typeFilter as never } : {}),
+      ...(search ? {
+        OR: [
+          { assetCode:    { contains: search, mode: "insensitive" as const } },
+          { brand:        { contains: search, mode: "insensitive" as const } },
+          { model:        { contains: search, mode: "insensitive" as const } },
+          { serialNumber: { contains: search, mode: "insensitive" as const } },
+          { partNumber:   { contains: search, mode: "insensitive" as const } },
+          { ipAddress:    { contains: search, mode: "insensitive" as const } },
+          { rackLocation: { contains: search, mode: "insensitive" as const } },
+          { customer:     { companyName: { contains: search, mode: "insensitive" as const } } },
+          { site:         { siteName: { contains: search, mode: "insensitive" as const } } },
+        ],
+      } : {}),
     },
     orderBy: buildOrderBy(col, order),
     include: {
@@ -83,11 +97,11 @@ export default async function AssetsPage({
   function sortLink(key: SortCol) {
     const isActive   = col === key;
     const nextOrder  = isActive && order === "asc" ? "desc" : "asc";
-    return `/assets?sort=${key}&order=${nextOrder}${status ? `&status=${status}` : ""}${typeFilter ? `&type=${typeFilter}` : ""}`;
+    return `/assets?sort=${key}&order=${nextOrder}${status ? `&status=${status}` : ""}${typeFilter ? `&type=${typeFilter}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
   }
 
   function filterLink(extraParams: string) {
-    return `/assets?sort=${col}&order=${order}&${extraParams}`;
+    return `/assets?sort=${col}&order=${order}${extraParams ? `&${extraParams}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
   }
 
   return (
@@ -98,12 +112,39 @@ export default async function AssetsPage({
         <div>
           <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>← Dashboard</Link>
           <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>🖥️ Asset Tracking</h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{assets.length} assets</p>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+            {assets.length} assets{search ? ` matching "${search}"` : ""}
+          </p>
         </div>
         <button style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold" }}>
           + New Asset
         </button>
       </div>
+
+      <form action="/assets" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px", background: "white", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+        <input type="hidden" name="sort" value={col} />
+        <input type="hidden" name="order" value={order} />
+        {status && <input type="hidden" name="status" value={status} />}
+        {typeFilter && <input type="hidden" name="type" value={typeFilter} />}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0, border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "0 12px", height: "40px", background: "#f8fafc" }}>
+          <span style={{ color: "#94a3b8", fontSize: "14px" }}>Search</span>
+          <input
+            name="search"
+            defaultValue={search}
+            placeholder="Asset code, serial, brand, model, customer, rack..."
+            style={{ width: "100%", minWidth: 0, border: 0, outline: 0, background: "transparent", fontSize: "14px", color: "#1e293b" }}
+            aria-label="Search assets"
+          />
+        </div>
+        <button type="submit" style={{ height: "40px", padding: "0 16px", border: 0, borderRadius: "10px", background: "#1E3A5F", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+          Search
+        </button>
+        {search && (
+          <Link href={`/assets?sort=${col}&order=${order}${status ? `&status=${status}` : ""}${typeFilter ? `&type=${typeFilter}` : ""}`} style={{ height: "40px", display: "inline-flex", alignItems: "center", padding: "0 12px", borderRadius: "10px", border: "1px solid #e2e8f0", color: "#64748b", textDecoration: "none", fontSize: "13px", fontWeight: 700 }}>
+            Clear
+          </Link>
+        )}
+      </form>
 
       {/* Warranty summary pills */}
       {(expiring30 > 0 || expiring90 > 0 || expired > 0) && (

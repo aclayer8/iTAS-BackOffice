@@ -23,17 +23,36 @@ function buildOrderBy(col: SortCol, order: SortOrder) {
 export default async function ContractsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; order?: string; status?: string }>;
+  searchParams: Promise<{ sort?: string; order?: string; status?: string; search?: string }>;
 }) {
   const params = await searchParams;
   const col    = (params.sort  ?? "contractNo") as SortCol;
   const order  = (params.order ?? "desc")       as SortOrder;
   const status = params.status ?? "";
+  const search = (params.search ?? "").trim();
 
   const contracts = await prisma.contract.findMany({
     where: {
       deletedAt: null,
       ...(status ? { status: status as never } : {}),
+      ...(search ? {
+        OR: [
+          { contractNo:  { contains: search, mode: "insensitive" as const } },
+          { soNo:        { contains: search, mode: "insensitive" as const } },
+          { poNo:        { contains: search, mode: "insensitive" as const } },
+          { serviceDesc: { contains: search, mode: "insensitive" as const } },
+          { customer:    { companyName: { contains: search, mode: "insensitive" as const } } },
+          { site:        { siteName: { contains: search, mode: "insensitive" as const } } },
+          { vendor:      { name: { contains: search, mode: "insensitive" as const } } },
+          { items:       { some: {
+            OR: [
+              { serialNumber: { contains: search, mode: "insensitive" as const } },
+              { partNumber:   { contains: search, mode: "insensitive" as const } },
+              { description:  { contains: search, mode: "insensitive" as const } },
+            ],
+          } } },
+        ],
+      } : {}),
     },
     orderBy: buildOrderBy(col, order),
     include: {
@@ -59,12 +78,38 @@ export default async function ContractsPage({
         <div>
           <Link href="/dashboard" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Dashboard</Link>
           <h1 style={{ margin: "8px 0 4px", color: "#1E3A5F", fontSize: "24px" }}>Contract Management</h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{contracts.length} contracts</p>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+            {contracts.length} contracts{search ? ` matching "${search}"` : ""}
+          </p>
         </div>
         <Link href="/contracts/new" style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "bold", textDecoration: "none" }}>
           + New Contract
         </Link>
       </div>
+
+      <form action="/contracts" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px", background: "white", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+        <input type="hidden" name="sort" value={col} />
+        <input type="hidden" name="order" value={order} />
+        {status && <input type="hidden" name="status" value={status} />}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0, border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "0 12px", height: "40px", background: "#f8fafc" }}>
+          <span style={{ color: "#94a3b8", fontSize: "14px" }}>Search</span>
+          <input
+            name="search"
+            defaultValue={search}
+            placeholder="Contract no, customer, SO/PO, serial, part no..."
+            style={{ width: "100%", minWidth: 0, border: 0, outline: 0, background: "transparent", fontSize: "14px", color: "#1e293b" }}
+            aria-label="Search contracts"
+          />
+        </div>
+        <button type="submit" style={{ height: "40px", padding: "0 16px", border: 0, borderRadius: "10px", background: "#1E3A5F", color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+          Search
+        </button>
+        {search && (
+          <Link href={`/contracts?sort=${col}&order=${order}${status ? `&status=${status}` : ""}`} style={{ height: "40px", display: "inline-flex", alignItems: "center", padding: "0 12px", borderRadius: "10px", border: "1px solid #e2e8f0", color: "#64748b", textDecoration: "none", fontSize: "13px", fontWeight: 700 }}>
+            Clear
+          </Link>
+        )}
+      </form>
 
       <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
         {[
@@ -76,7 +121,7 @@ export default async function ContractsPage({
         ].map((tab) => {
           const active = status === tab.value;
           const cnt = tab.value === "" ? contracts.length : (countMap[tab.value] ?? 0);
-          const href = `/contracts?sort=${col}&order=${order}${tab.value ? `&status=${tab.value}` : ""}`;
+          const href = `/contracts?sort=${col}&order=${order}${tab.value ? `&status=${tab.value}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
           return (
             <Link key={tab.value} href={href} style={{
               padding: "6px 14px", borderRadius: "99px", fontSize: "13px", fontWeight: 600,
@@ -117,7 +162,7 @@ export default async function ContractsPage({
                 const isActive = col === key;
                 const nextOrder = isActive && order === "asc" ? "desc" : "asc";
                 const arrow = isActive ? (order === "asc" ? " ↑" : " ↓") : " ↕";
-                const href = `/contracts?sort=${key}&order=${nextOrder}${status ? `&status=${status}` : ""}`;
+                const href = `/contracts?sort=${key}&order=${nextOrder}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
                 return (
                   <th key={label} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>
                     <Link href={href} style={{ color: "white", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", opacity: isActive ? 1 : 0.85 }}>
