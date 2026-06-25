@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ContractItemsSlaEditor from "./ContractItemsSlaEditor";
+import ContractItemsEditor from "./ContractItemsEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -60,15 +60,24 @@ export default async function ContractDetailPage({
   const serialNumbers = contract.items
     .map((i) => i.serialNumber)
     .filter(Boolean) as string[];
+  const linkedAssetIds = contract.items
+    .map((i) => i.warrantyRef)
+    .filter(Boolean) as string[];
 
-  const assets = serialNumbers.length > 0
+  const assets = serialNumbers.length > 0 || linkedAssetIds.length > 0
     ? await prisma.asset.findMany({
-        where: { serialNumber: { in: serialNumbers, mode: "insensitive" } },
+        where: {
+          OR: [
+            ...(serialNumbers.length > 0 ? [{ serialNumber: { in: serialNumbers, mode: "insensitive" as const } }] : []),
+            ...(linkedAssetIds.length > 0 ? [{ id: { in: linkedAssetIds } }] : []),
+          ],
+        },
         select: { id: true, assetCode: true, serialNumber: true, brand: true, model: true, assetType: true, lifecycleStatus: true, warrantyEnd: true },
       })
     : [];
 
   const contractDays = daysLeft(contract.endDate);
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
   const itemRows = contract.items.map((item) => ({
     id: item.id,
     itemType: item.itemType,
@@ -82,6 +91,7 @@ export default async function ContractDetailPage({
     sla: item.sla,
     remark: item.remark,
     sortOrder: item.sortOrder,
+    linkedAssetCode: item.warrantyRef ? assetById.get(item.warrantyRef)?.assetCode ?? null : null,
   }));
   const assetRows = assets.map((asset) => ({
     assetCode: asset.assetCode,
@@ -157,7 +167,7 @@ export default async function ContractDetailPage({
         </div>
       </div>
 
-      <ContractItemsSlaEditor contractId={contract.id} items={itemRows} assets={assetRows} />
+      <ContractItemsEditor contractId={contract.id} items={itemRows} assets={assetRows} />
 
       {/* Items table */}
       <div style={{ display: "none" }}>
