@@ -19,18 +19,6 @@ function effectiveContractStatus(status: string, endDate: Date) {
   return status;
 }
 
-function itemSlaSummary(items: { sla: string | null }[]) {
-  const slas = Array.from(
-    new Set(
-      items
-        .map((item) => item.sla?.trim())
-        .filter((sla): sla is string => Boolean(sla)),
-    ),
-  );
-
-  return slas.length > 0 ? slas.join(", ") : "—";
-}
-
 const SORT_COLUMNS = ["contractNo", "customer", "endDate", "startDate", "status"] as const;
 const SORT_ORDERS = ["asc", "desc"] as const;
 
@@ -87,7 +75,6 @@ export default async function ContractsPage({
     orderBy: buildOrderBy(col, order),
     include: {
       customer: { select: { companyName: true } },
-      items:    { select: { sla: true }, orderBy: { sortOrder: "asc" } },
       _count:   { select: { items: true } },
     },
   });
@@ -150,7 +137,6 @@ export default async function ContractsPage({
                 { label: "Contract No", key: "contractNo" },
                 { label: "Customer",    key: "customer" },
                 { label: "Project Name",key: null },
-                { label: "SLA",         key: null },
                 { label: "Start",       key: "startDate" },
                 { label: "End",         key: "endDate" },
                 { label: "Days Left",   key: null },
@@ -185,7 +171,6 @@ export default async function ContractsPage({
               const dayColor = days < 0 ? "#ef4444" : days <= 30 ? "#f97316" : days <= 90 ? "#f59e0b" : "#10b981";
               const displayStatus = effectiveContractStatus(c.status, c.endDate);
               const projectName = c.serviceDesc?.trim() || "—";
-              const itemSlas = itemSlaSummary(c.items);
               return (
                 <tr key={c.id} style={{ backgroundColor: i % 2 === 0 ? "white" : "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "12px 16px", fontWeight: 700, fontFamily: "monospace" }}>
@@ -197,11 +182,6 @@ export default async function ContractsPage({
                   <td style={{ padding: "12px 16px", color: "#334155", fontSize: "13px", maxWidth: "260px" }}>
                     <span title={projectName} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {projectName}
-                    </span>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: "12px", color: "#334155", maxWidth: "180px" }}>
-                    <span title={itemSlas} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {itemSlas}
                     </span>
                   </td>
                   <td style={{ padding: "12px 16px", fontSize: "13px" }}>{c.startDate.toLocaleDateString("en-GB")}</td>
@@ -222,7 +202,7 @@ export default async function ContractsPage({
             })}
             {contracts.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
+                <td colSpan={8} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
                   No contracts found
                 </td>
               </tr>
