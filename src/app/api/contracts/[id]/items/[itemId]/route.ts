@@ -119,7 +119,9 @@ export async function PATCH(
               partNumber: data.partNumber,
               warrantyStart: startDate,
               warrantyEnd: endDate,
-              ...(serialChanged ? { serialNumber: data.serialNumber } : {}),
+              ...(serialChanged && data.serialNumber
+                ? { serialNumber: data.serialNumber }
+                : {}),
               ...(!linkedAsset.installDate && startDate ? { installDate: startDate } : {}),
             },
           });
