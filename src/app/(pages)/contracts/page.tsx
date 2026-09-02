@@ -1,5 +1,9 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { hasPermission } from "@/lib/rbac";
+import type { UserRole } from "@/types";
+import ContractEditDialog from "./ContractEditDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +52,10 @@ export default async function ContractsPage({
   const order  = parseSortOrder(params.order);
   const status = params.status ?? "";
   const search = (params.search ?? "").trim();
+
+  const session = await auth();
+  const role = session?.user?.role as UserRole | undefined;
+  const canEdit = role ? hasPermission(role, "contract:write") : false;
 
   const contractRows = await prisma.contract.findMany({
     where: {
@@ -142,6 +150,7 @@ export default async function ContractsPage({
                 { label: "Days Left",   key: null },
                 { label: "Items",       key: null },
                 { label: "Status",      key: "status" },
+                ...(canEdit ? [{ label: "Actions", key: null }] : []),
               ].map(({ label, key }) => {
                 if (!key) {
                   return (
@@ -197,12 +206,17 @@ export default async function ContractsPage({
                       {displayStatus}
                     </span>
                   </td>
+                  {canEdit && (
+                    <td style={{ padding: "8px 16px" }}>
+                      <ContractEditDialog contractId={c.id} contractNo={c.contractNo} />
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {contracts.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
+                <td colSpan={canEdit ? 9 : 8} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
                   No contracts found
                 </td>
               </tr>
