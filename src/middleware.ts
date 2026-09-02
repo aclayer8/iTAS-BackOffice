@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/health", "/api/cron", "_next", "favicon.ico"];
+const PUBLIC_PATHS = ["/login", "/itas-logo.png", "/api/auth", "/api/health", "/api/cron", "_next", "favicon.ico"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

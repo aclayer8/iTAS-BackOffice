@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -55,16 +56,24 @@ function LoginForm() {
       }}>
         <div>
           {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "48px" }}>
+          <div style={{ marginBottom: "48px" }}>
             <div style={{
-              width: "44px", height: "44px", borderRadius: "10px",
-              background: "rgba(255,255,255,0.15)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "22px",
-            }}>🖥️</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "18px", letterSpacing: "0.02em" }}>iTAS</div>
-              <div style={{ fontSize: "11px", opacity: 0.6, letterSpacing: "0.08em", textTransform: "uppercase" }}>BackOffice System</div>
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "8px 12px",
+              borderRadius: "10px",
+              background: "white",
+              overflow: "hidden",
+            }}>
+              <Image
+                src="/itas-logo.png"
+                alt="iTAS Solutions"
+                width={174}
+                height={102}
+                priority
+                style={{ display: "block", width: "148px", height: "auto" }}
+              />
             </div>
           </div>
 
