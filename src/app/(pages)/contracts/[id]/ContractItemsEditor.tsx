@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Save, X } from "lucide-react";
+import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const ITEM_TYPES = ["HARDWARE", "LICENSE", "SUBSCRIPTION", "SERVICE", "SUPPORT"] as const;
-const SLA_OPTIONS = ["8x5xNBD", "8x5x4", "24x7xNBD", "24x7x4", "Best Effort"] as const;
+const SLA_OPTIONS = ["8x5 NBD", "8x5xNBD", "8x5x4", "24x7xNBD", "24x7x4", "Best Effort"] as const;
 
 const TYPE_COLOR: Record<string, string> = {
   HARDWARE: "#2563eb",
@@ -82,6 +82,22 @@ function toForm(item: ContractItemRow): ItemForm {
   };
 }
 
+function emptyForm(): ItemForm {
+  return {
+    itemType: "HARDWARE",
+    partNumber: "",
+    description: "",
+    serialNumber: "",
+    quantity: "1",
+    unit: "EA",
+    sla: "8x5 NBD",
+    startDate: "",
+    endDate: "",
+    remark: "",
+    syncAsset: false,
+  };
+}
+
 function DaysBadge({ days }: { days: number | null }) {
   if (days === null) return <span style={{ color: "#9ca3af" }}>-</span>;
   const color = days < 0 ? "#ef4444" : days <= 30 ? "#f97316" : days <= 90 ? "#f59e0b" : "#10b981";
@@ -123,8 +139,10 @@ export default function ContractItemsEditor({
 }) {
   const router = useRouter();
   const [editingItem, setEditingItem] = useState<ContractItemRow | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [form, setForm] = useState<ItemForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const assetBySN = useMemo(
@@ -132,14 +150,23 @@ export default function ContractItemsEditor({
     [assets],
   );
 
+  function openCreate() {
+    setEditingItem(null);
+    setIsCreating(true);
+    setForm(emptyForm());
+    setMessage(null);
+  }
+
   function openEdit(item: ContractItemRow) {
     setEditingItem(item);
+    setIsCreating(false);
     setForm(toForm(item));
     setMessage(null);
   }
 
-  function closeEdit() {
+  function closeDialog() {
     setEditingItem(null);
+    setIsCreating(false);
     setForm(null);
     setSaving(false);
   }
@@ -149,9 +176,9 @@ export default function ContractItemsEditor({
   }
 
   async function saveItem() {
-    if (!editingItem || !form) return;
+    if (!form || (!isCreating && !editingItem)) return;
 
-    const serialChanged = (editingItem.serialNumber ?? "") !== form.serialNumber.trim();
+    const serialChanged = editingItem !== null && (editingItem.serialNumber ?? "") !== form.serialNumber.trim();
     if (serialChanged) {
       const confirmed = window.confirm("Serial number changed. Save this item and sync the linked asset if safe?");
       if (!confirmed) return;
@@ -160,37 +187,73 @@ export default function ContractItemsEditor({
     setSaving(true);
     setMessage(null);
     try {
-      const response = await fetch(`/api/contracts/${contractId}/items/${editingItem.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemType: form.itemType,
-          partNumber: form.partNumber,
-          description: form.description,
-          serialNumber: form.serialNumber,
-          quantity: form.quantity ? Number(form.quantity) : null,
-          unit: form.unit,
-          sla: form.sla,
-          startDate: form.startDate || null,
-          endDate: form.endDate || null,
-          remark: form.remark,
-          syncAsset: form.syncAsset,
-          confirmSerialChange: serialChanged,
-        }),
+      const response = await fetch(
+        isCreating
+          ? `/api/contracts/${contractId}/items`
+          : `/api/contracts/${contractId}/items/${editingItem?.id}`,
+        {
+          method: isCreating ? "POST" : "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemType: form.itemType,
+            partNumber: form.partNumber,
+            description: form.description,
+            serialNumber: form.serialNumber,
+            quantity: form.quantity ? Number(form.quantity) : null,
+            unit: form.unit,
+            sla: form.sla,
+            startDate: form.startDate || null,
+            endDate: form.endDate || null,
+            remark: form.remark,
+            syncAsset: form.syncAsset,
+            confirmSerialChange: serialChanged,
+          }),
+        },
+      );
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? `Unable to ${isCreating ? "add" : "update"} item.`);
+      }
+
+      const action = isCreating ? "added" : "updated";
+      closeDialog();
+      setMessage(result.data.assetSynced ? `Item ${action} and linked asset synced.` : `Item ${action}.`);
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : `Unable to ${isCreating ? "add" : "update"} item.`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteItem(item: ContractItemRow) {
+    if (deletingItemId) return;
+
+    const label = item.description?.split("\n")[0] || item.partNumber || item.serialNumber || `item ${item.sortOrder}`;
+    const confirmed = window.confirm(
+      `Delete "${label}" from this contract?\n\nThe linked Asset will not be deleted. This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingItemId(item.id);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/items/${item.id}`, {
+        method: "DELETE",
       });
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error ?? "Unable to update item.");
+        throw new Error(result.error ?? "Unable to delete item.");
       }
 
-      closeEdit();
-      setMessage(result.data.assetSynced ? "Item updated and linked asset synced." : "Item updated.");
+      setMessage("Item deleted. The linked asset was kept.");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to update item.");
+      setMessage(error instanceof Error ? error.message : "Unable to delete item.");
     } finally {
-      setSaving(false);
+      setDeletingItemId(null);
     }
   }
 
@@ -201,14 +264,24 @@ export default function ContractItemsEditor({
           <div>
             <div style={{ fontWeight: 700, color: "#1E3A5F", fontSize: "17px" }}>Items ({items.length})</div>
             <div style={{ fontSize: "14px", color: "#9ca3af", marginTop: "2px" }}>
-              Edit item rows. Asset warranty fields sync when enabled.
+              Add, edit, or delete item rows. Asset warranty fields sync only when enabled.
             </div>
           </div>
-          {message && (
-            <div role="status" style={{ color: message.includes("Unable") ? "#c2410c" : "#15803d", fontSize: "14px", fontWeight: 700 }}>
-              {message}
-            </div>
-          )}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "12px", flexWrap: "wrap" }}>
+            {message && (
+              <div role="status" style={{ color: message.includes("Unable") || message.includes("Invalid") ? "#c2410c" : "#15803d", fontSize: "14px", fontWeight: 700 }}>
+                {message}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={openCreate}
+              style={{ display: "inline-flex", alignItems: "center", gap: "7px", backgroundColor: "#1E3A5F", color: "white", border: "none", borderRadius: "7px", padding: "9px 13px", cursor: "pointer", fontSize: "14px", fontWeight: 700 }}
+            >
+              <Plus size={16} aria-hidden="true" />
+              Add Item
+            </button>
+          </div>
         </div>
 
         {items.length === 0 ? (
@@ -270,7 +343,7 @@ export default function ContractItemsEditor({
                         )}
                       </td>
                       <td style={{ padding: "10px 12px", color: "#9ca3af", fontSize: "13px", maxWidth: "150px" }}>{item.remark ?? "-"}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                      <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <button
                           type="button"
                           onClick={() => openEdit(item)}
@@ -280,6 +353,17 @@ export default function ContractItemsEditor({
                         >
                           <Pencil size={14} aria-hidden="true" />
                           Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteItem(item)}
+                          disabled={deletingItemId !== null}
+                          aria-label={`Delete item ${item.sortOrder || index + 1}`}
+                          title="Delete item"
+                          style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "white", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: "7px", padding: "6px 10px", marginLeft: "8px", cursor: deletingItemId !== null ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 700, opacity: deletingItemId !== null ? 0.65 : 1 }}
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                          {deletingItemId === item.id ? "Deleting..." : "Delete"}
                         </button>
                       </td>
                     </tr>
@@ -291,20 +375,22 @@ export default function ContractItemsEditor({
         )}
       </div>
 
-      {editingItem && form && (
-        <div role="dialog" aria-modal="true" aria-label="Edit contract item" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15,23,42,.45)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      {(isCreating || editingItem) && form && (
+        <div role="dialog" aria-modal="true" aria-label={isCreating ? "Add contract item" : "Edit contract item"} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15,23,42,.45)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div style={{ width: "min(860px, 100%)", maxHeight: "90vh", overflowY: "auto", backgroundColor: "white", borderRadius: "12px", boxShadow: "0 20px 50px rgba(15,23,42,.25)" }}>
             <div style={{ padding: "18px 22px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
               <div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "#1E3A5F" }}>Edit Contract Item</div>
-                <div style={{ color: "#64748b", fontSize: "13px", marginTop: "2px" }}>Item {editingItem.sortOrder || "-"}</div>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#1E3A5F" }}>{isCreating ? "Add Contract Item" : "Edit Contract Item"}</div>
+                <div style={{ color: "#64748b", fontSize: "13px", marginTop: "2px" }}>
+                  {isCreating ? "Add missing equipment or service to this contract." : `Item ${editingItem?.sortOrder || "-"}`}
+                </div>
               </div>
-              <button type="button" onClick={closeEdit} aria-label="Close edit dialog" style={{ border: "none", background: "transparent", cursor: "pointer", color: "#64748b", padding: "6px" }}>
+              <button type="button" onClick={closeDialog} aria-label="Close item dialog" style={{ border: "none", background: "transparent", cursor: "pointer", color: "#64748b", padding: "6px" }}>
                 <X size={20} aria-hidden="true" />
               </button>
             </div>
 
-            <div style={{ padding: "22px", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "14px" }}>
+            <div style={{ padding: "22px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
               <div>
                 <label style={LABEL_STYLE} htmlFor="item-type">Type</label>
                 <select id="item-type" value={form.itemType} onChange={(event) => setField("itemType", event.target.value)} style={INPUT_STYLE}>
@@ -354,21 +440,23 @@ export default function ContractItemsEditor({
               <label style={{ gridColumn: "1 / -1", display: "flex", gap: "10px", alignItems: "flex-start", color: "#334155", fontSize: "14px", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px", backgroundColor: "#f8fafc" }}>
                 <input type="checkbox" checked={form.syncAsset} onChange={(event) => setField("syncAsset", event.target.checked)} style={{ marginTop: "2px" }} />
                 <span>
-                  <strong>Sync linked asset</strong>
+                  <strong>{isCreating ? "Sync matching asset" : "Sync linked asset"}</strong>
                   <span style={{ display: "block", color: "#64748b", marginTop: "2px" }}>
-                    Updates asset part number, warranty start, warranty end, and serial number when it is safe.
+                    {isCreating
+                      ? "If the serial number matches an existing asset, update its part number and warranty dates."
+                      : "Updates asset part number, warranty start, warranty end, and serial number when it is safe."}
                   </span>
                 </span>
               </label>
             </div>
 
             <div style={{ padding: "16px 22px", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-              <button type="button" onClick={closeEdit} style={{ backgroundColor: "white", color: "#334155", border: "1px solid #cbd5e1", borderRadius: "7px", padding: "9px 14px", cursor: "pointer", fontSize: "14px", fontWeight: 700 }}>
+              <button type="button" onClick={closeDialog} style={{ backgroundColor: "white", color: "#334155", border: "1px solid #cbd5e1", borderRadius: "7px", padding: "9px 14px", cursor: "pointer", fontSize: "14px", fontWeight: 700 }}>
                 Cancel
               </button>
               <button type="button" onClick={saveItem} disabled={saving} style={{ display: "inline-flex", alignItems: "center", gap: "7px", backgroundColor: "#1E3A5F", color: "white", border: "none", borderRadius: "7px", padding: "9px 14px", cursor: saving ? "not-allowed" : "pointer", fontSize: "14px", fontWeight: 700 }}>
                 <Save size={16} aria-hidden="true" />
-                {saving ? "Saving..." : "Save"}
+                {saving ? "Saving..." : isCreating ? "Add Item" : "Save"}
               </button>
             </div>
           </div>

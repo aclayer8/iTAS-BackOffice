@@ -1,40 +1,18 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { badRequest, notFound, ok, serverError, withAuth } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
-
-const nullableText = (max: number) =>
-  z.string().trim().max(max).transform((value) => value || null).nullable();
-
-const nullableDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .nullable();
-
-const ContractItemUpdateSchema = z.object({
-  itemType: z.enum(["HARDWARE", "LICENSE", "SUBSCRIPTION", "SERVICE", "SUPPORT"]),
-  partNumber: nullableText(100),
-  description: nullableText(500),
-  serialNumber: nullableText(100),
-  quantity: z.number().int().positive().max(999999).nullable(),
-  unit: nullableText(50),
-  sla: nullableText(200),
-  startDate: nullableDate,
-  endDate: nullableDate,
-  remark: nullableText(500),
-  syncAsset: z.boolean().default(true),
-  confirmSerialChange: z.boolean().default(false),
-});
-
-function toDate(value: string | null) {
-  return value ? new Date(`${value}T00:00:00.000Z`) : null;
-}
+import {
+  ContractItemUpdateSchema,
+  contractItemAuditValues,
+  hasInvalidDateRange,
+  toDate,
+} from "../validation";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string }> },
 ) {
-  return withAuth(req, async (req) => {
+  return withAuth(req, async (req, userId) => {
     try {
       const { id: contractId, itemId } = await params;
       const body = await req.json();
@@ -48,13 +26,13 @@ export async function PATCH(
       const startDate = toDate(data.startDate);
       const endDate = toDate(data.endDate);
 
-      if (startDate && endDate && endDate < startDate) {
+      if (hasInvalidDateRange(startDate, endDate)) {
         return badRequest("End date must be on or after start date.");
       }
 
       const result = await prisma.$transaction(async (tx) => {
         const item = await tx.contractItem.findFirst({
-          where: { id: itemId, contractId },
+          where: { id: itemId, contractId, contract: { deletedAt: null } },
         });
 
         if (!item) return { status: "not_found" as const };
@@ -128,6 +106,24 @@ export async function PATCH(
           assetSynced = true;
         }
 
+        await Promise.all([
+          tx.contract.update({
+            where: { id: contractId },
+            data: { version: { increment: 1 } },
+          }),
+          tx.auditLog.create({
+            data: {
+              userId,
+              action: "UPDATE",
+              entityType: "contract_item",
+              entityId: updatedItem.id,
+              oldValues: contractItemAuditValues(item),
+              newValues: contractItemAuditValues(updatedItem),
+              description: `Updated item ${updatedItem.sortOrder} in contract ${contractId}`,
+            },
+          }),
+        ]);
+
         return {
           status: "updated" as const,
           itemId: updatedItem.id,
@@ -149,6 +145,52 @@ export async function PATCH(
         assetSynced: result.assetSynced,
         linkedAssetCode: result.linkedAssetCode,
       });
+    } catch (error) {
+      return serverError(error);
+    }
+  }, "contract:write");
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; itemId: string }> },
+) {
+  return withAuth(req, async (req, userId) => {
+    try {
+      const { id: contractId, itemId } = await params;
+
+      const deleted = await prisma.$transaction(async (tx) => {
+        const item = await tx.contractItem.findFirst({
+          where: { id: itemId, contractId, contract: { deletedAt: null } },
+          include: { contract: { select: { contractNo: true } } },
+        });
+
+        if (!item) return null;
+
+        await tx.contractItem.delete({ where: { id: item.id } });
+
+        await Promise.all([
+          tx.contract.update({
+            where: { id: contractId },
+            data: { version: { increment: 1 } },
+          }),
+          tx.auditLog.create({
+            data: {
+              userId,
+              action: "DELETE",
+              entityType: "contract_item",
+              entityId: item.id,
+              oldValues: contractItemAuditValues(item),
+              description: `Deleted item ${item.sortOrder} from contract ${item.contract.contractNo}`,
+            },
+          }),
+        ]);
+
+        return { itemId: item.id };
+      });
+
+      if (!deleted) return notFound("Contract item");
+      return ok(deleted);
     } catch (error) {
       return serverError(error);
     }
