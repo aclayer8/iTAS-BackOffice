@@ -153,6 +153,8 @@ export default function ContractDeleteButton({
             justifyContent: "center",
             padding: "20px",
             backgroundColor: "rgba(15,23,42,.5)",
+            textAlign: "left",
+            whiteSpace: "normal",
           }}
         >
           <div ref={dialogRef} tabIndex={-1} aria-busy={deleting} style={{ width: "min(480px, 100%)", borderRadius: "12px", backgroundColor: "white", boxShadow: "0 24px 70px rgba(15,23,42,.3)" }}>
@@ -163,7 +165,7 @@ export default function ContractDeleteButton({
                 </span>
                 <div>
                   <h2 id={`contract-delete-title-${contractId}`} style={{ margin: 0, color: "#991b1b", fontSize: "18px" }}>Delete contract?</h2>
-                  <div style={{ marginTop: "4px", color: "#475569", fontFamily: "monospace", fontSize: "14px", fontWeight: 700 }}>{contractNo}</div>
+                  <div style={{ marginTop: "4px", overflowWrap: "anywhere", color: "#475569", fontFamily: "monospace", fontSize: "14px", fontWeight: 700 }}>{contractNo}</div>
                 </div>
               </div>
               <button type="button" onClick={closeDialog} disabled={deleting} aria-label="Close delete contract dialog" style={{ border: "none", padding: "5px", background: "transparent", color: "#64748b", cursor: deleting ? "not-allowed" : "pointer" }}>
