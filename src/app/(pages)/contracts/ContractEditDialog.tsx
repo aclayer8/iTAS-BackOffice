@@ -273,19 +273,19 @@ export default function ContractEditDialog({
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "6px",
+          justifyContent: "center",
+          width: "32px",
+          height: "32px",
           border: "1px solid #bfdbfe",
           borderRadius: "7px",
-          padding: "6px 10px",
+          padding: 0,
           backgroundColor: "#eff6ff",
           color: "#1d4ed8",
           cursor: "pointer",
-          fontSize: "13px",
-          fontWeight: 700,
         }}
+        title="Edit contract"
       >
-        <Pencil size={14} aria-hidden="true" />
-        Edit
+        <Pencil size={15} aria-hidden="true" />
       </button>
 
       {open && (
