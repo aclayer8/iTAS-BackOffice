@@ -349,10 +349,9 @@ export default function ContractItemsEditor({
                           onClick={() => openEdit(item)}
                           aria-label={`Edit item ${item.sortOrder || index + 1}`}
                           title="Edit item"
-                          style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "white", color: "#1E3A5F", border: "1px solid #cbd5e1", borderRadius: "7px", padding: "6px 10px", cursor: "pointer", fontSize: "13px", fontWeight: 700 }}
+                          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", backgroundColor: "white", color: "#1E3A5F", border: "1px solid #cbd5e1", borderRadius: "7px", padding: 0, cursor: "pointer" }}
                         >
-                          <Pencil size={14} aria-hidden="true" />
-                          Edit
+                          <Pencil size={15} aria-hidden="true" />
                         </button>
                         <button
                           type="button"
@@ -360,10 +359,9 @@ export default function ContractItemsEditor({
                           disabled={deletingItemId !== null}
                           aria-label={`Delete item ${item.sortOrder || index + 1}`}
                           title="Delete item"
-                          style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "white", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: "7px", padding: "6px 10px", marginLeft: "8px", cursor: deletingItemId !== null ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 700, opacity: deletingItemId !== null ? 0.65 : 1 }}
+                          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", backgroundColor: "white", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: "7px", padding: 0, marginLeft: "8px", cursor: deletingItemId !== null ? "not-allowed" : "pointer", opacity: deletingItemId !== null ? 0.65 : 1 }}
                         >
-                          <Trash2 size={14} aria-hidden="true" />
-                          {deletingItemId === item.id ? "Deleting..." : "Delete"}
+                          <Trash2 size={15} aria-hidden="true" />
                         </button>
                       </td>
                     </tr>

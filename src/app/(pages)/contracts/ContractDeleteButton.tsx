@@ -120,19 +120,19 @@ export default function ContractDeleteButton({
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "6px",
+          justifyContent: "center",
+          width: "32px",
+          height: "32px",
           border: "1px solid #fecaca",
           borderRadius: "7px",
-          padding: "6px 10px",
+          padding: 0,
           backgroundColor: "#fff7f7",
           color: "#b91c1c",
           cursor: "pointer",
-          fontSize: "13px",
-          fontWeight: 700,
         }}
+        title="Delete contract"
       >
-        <Trash2 size={14} aria-hidden="true" />
-        Delete
+        <Trash2 size={15} aria-hidden="true" />
       </button>
 
       {open && (
