@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/rbac";
 import type { UserRole } from "@/types";
+import ContractDeleteButton from "./ContractDeleteButton";
 import ContractEditDialog from "./ContractEditDialog";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,8 @@ export default async function ContractsPage({
   const session = await auth();
   const role = session?.user?.role as UserRole | undefined;
   const canEdit = role ? hasPermission(role, "contract:write") : false;
+  const canDelete = role ? hasPermission(role, "contract:delete") : false;
+  const canManage = canEdit || canDelete;
 
   const contractRows = await prisma.contract.findMany({
     where: {
@@ -137,7 +140,7 @@ export default async function ContractsPage({
         })}
       </div>
 
-      <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>
+      <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
           <thead>
             <tr style={{ backgroundColor: "#1E3A5F", color: "white" }}>
@@ -150,7 +153,7 @@ export default async function ContractsPage({
                 { label: "Days Left",   key: null },
                 { label: "Items",       key: null },
                 { label: "Status",      key: "status" },
-                ...(canEdit ? [{ label: "Actions", key: null }] : []),
+                ...(canManage ? [{ label: "Actions", key: null }] : []),
               ].map(({ label, key }) => {
                 if (!key) {
                   return (
@@ -206,9 +209,12 @@ export default async function ContractsPage({
                       {displayStatus}
                     </span>
                   </td>
-                  {canEdit && (
+                  {canManage && (
                     <td style={{ padding: "8px 16px" }}>
-                      <ContractEditDialog contractId={c.id} contractNo={c.contractNo} />
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}>
+                        {canEdit && <ContractEditDialog contractId={c.id} contractNo={c.contractNo} />}
+                        {canDelete && <ContractDeleteButton contractId={c.id} contractNo={c.contractNo} itemCount={c._count.items} />}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -216,7 +222,7 @@ export default async function ContractsPage({
             })}
             {contracts.length === 0 && (
               <tr>
-                <td colSpan={canEdit ? 9 : 8} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
+                <td colSpan={canManage ? 9 : 8} style={{ padding: "48px", textAlign: "center", color: "#9ca3af" }}>
                   No contracts found
                 </td>
               </tr>

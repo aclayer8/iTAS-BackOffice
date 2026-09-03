@@ -224,3 +224,68 @@ export async function PATCH(
     }
   }, "contract:write");
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  return withAuth(req, async (_req, userId) => {
+    try {
+      const { id } = await params;
+      const deletedAt = new Date();
+
+      const deleted = await prisma.$transaction(async (tx) => {
+        const existing = await tx.contract.findFirst({
+          where: { id, ...notDeleted },
+          select: {
+            contractNo: true,
+            customerId: true,
+            soNo: true,
+            poNo: true,
+            serviceDesc: true,
+            startDate: true,
+            endDate: true,
+            slaType: true,
+            supportType: true,
+            status: true,
+            autoRenew: true,
+            totalValue: true,
+            currency: true,
+            remark: true,
+          },
+        });
+
+        if (!existing) return null;
+
+        const updateResult = await tx.contract.updateMany({
+          where: { id, ...notDeleted },
+          data: {
+            deletedAt,
+            version: { increment: 1 },
+          },
+        });
+
+        if (updateResult.count !== 1) return null;
+
+        await tx.auditLog.create({
+          data: {
+            userId,
+            action: "DELETE",
+            entityType: "contract",
+            entityId: id,
+            oldValues: auditValues(existing),
+            newValues: { deletedAt: deletedAt.toISOString() },
+            description: `Deleted contract ${existing.contractNo}`,
+          },
+        });
+
+        return { id, contractNo: existing.contractNo };
+      });
+
+      if (!deleted) return notFound("Contract");
+      return ok(deleted);
+    } catch (error) {
+      return serverError(error);
+    }
+  }, "contract:delete");
+}
