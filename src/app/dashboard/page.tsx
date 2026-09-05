@@ -1,7 +1,8 @@
 import AppShell from "@/components/layout/AppShell";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { AlertCircle, AlertTriangle, ArrowRight, Clock3, FileText, MoreHorizontal, Plus, Search } from "lucide-react";
+import type { Prisma } from "@prisma/client";
+import { AlertCircle, AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, Clock3, FileText, MoreHorizontal, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import styles from "./dashboard.module.css";
 
@@ -29,22 +30,30 @@ function greeting() {
   return "Good evening";
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: {
+  searchParams: Promise<{ page?: string | string[] }>;
+}) {
   const session = await auth();
   const now = new Date();
   const in30 = new Date(now.getTime() + 30 * DAY_MS);
   const in60 = new Date(now.getTime() + 60 * DAY_MS);
   const in90 = new Date(now.getTime() + 90 * DAY_MS);
 
-  const [within30, within60, within90, activeContracts, attentionContracts] = await Promise.all([
+  const params = await searchParams;
+  const requestedPage = typeof params.page === "string" && /^\d+$/.test(params.page) ? Number(params.page) : 1;
+  const pageSize = 10;
+  const attentionWhere: Prisma.ContractWhereInput = {
+    deletedAt: null, endDate: { lte: in90 }, status: { in: ["ACTIVE", "PENDING_RENEWAL", "EXPIRED"] },
+  };
+  const [within30, within60, within90, activeContracts, totalItems, nearestContract] = await Promise.all([
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gte: now, lte: in30 } } }),
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in30, lte: in60 } } }),
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in60, lte: in90 } } }),
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in90 } } }),
-    prisma.contract.findMany({
-      where: { deletedAt: null, endDate: { lte: in90 }, status: { in: ["ACTIVE", "PENDING_RENEWAL", "EXPIRED"] } },
-      orderBy: { endDate: "desc" },
-      take: 10,
+    prisma.contract.count({ where: attentionWhere }),
+    prisma.contract.findFirst({
+      where: { ...attentionWhere, endDate: { gte: now, lte: in90 } },
+      orderBy: [{ endDate: "asc" }, { id: "asc" }],
       include: {
         customer: { select: { companyName: true } },
         createdBy: { select: { name: true } },
@@ -53,9 +62,23 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const nearestContract = [...attentionContracts]
-    .filter((contract) => daysUntil(contract.endDate) >= 0)
-    .sort((a, b) => a.endDate.getTime() - b.endDate.getTime())[0];
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(totalPages, Math.max(1, Number.isSafeInteger(requestedPage) ? requestedPage : 1));
+  const attentionContracts = await prisma.contract.findMany({
+    where: attentionWhere,
+    orderBy: [{ endDate: "desc" }, { id: "asc" }],
+    skip: (currentPage - 1) * pageSize,
+    take: pageSize,
+    include: {
+      customer: { select: { companyName: true } },
+      createdBy: { select: { name: true } },
+      items: { orderBy: { sortOrder: "asc" }, take: 1 },
+    },
+  });
+  const pageNumbers = Array.from(new Set(totalPages <= 7
+    ? Array.from({ length: totalPages }, (_, index) => index + 1)
+    : [1, currentPage - 1, currentPage, currentPage + 1, totalPages]))
+    .filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
   const nearestItem = nearestContract?.items[0];
   const displayName = session?.user?.name?.trim() || "User";
   const summary = [
@@ -112,7 +135,7 @@ export default async function DashboardPage() {
 
         <section className={styles.tableSection}>
           <div className={styles.tableHeader}>
-            <div><h2>Contracts Expiring Within 90 Days</h2><span>{attentionContracts.length} shown</span></div>
+            <div><h2>Contracts Expiring Within 90 Days</h2><span>({totalItems.toLocaleString()} items)</span></div>
             <Link href="/contracts?sort=endDate&order=asc">View all contracts <ArrowRight size={16} /></Link>
           </div>
           <div className={styles.tableScroll}>
@@ -139,6 +162,17 @@ export default async function DashboardPage() {
                 {!attentionContracts.length && <tr><td colSpan={10} className={styles.empty}>No contracts require attention within 90 days.</td></tr>}
               </tbody>
             </table>
+          </div>
+          <div className={styles.tableFooter}>
+            <span role="status">Showing {attentionContracts.length} of {totalItems.toLocaleString()} items</span>
+            <nav className={styles.pagination} aria-label="Contract pagination">
+              {currentPage > 1 ? <Link href={`/dashboard?page=${currentPage - 1}`} scroll={false} aria-label="Previous page"><ChevronLeft size={18} /></Link> : <span aria-disabled="true" aria-label="Previous page"><ChevronLeft size={18} /></span>}
+              {pageNumbers.map((page, index) => <span className={styles.pageGroup} key={page}>
+                {index > 0 && page - pageNumbers[index - 1] > 1 && <span className={styles.ellipsis}>…</span>}
+                <Link href={`/dashboard?page=${page}`} scroll={false} aria-label={`Page ${page}`} aria-current={page === currentPage ? "page" : undefined}>{page}</Link>
+              </span>)}
+              {currentPage < totalPages ? <Link href={`/dashboard?page=${currentPage + 1}`} scroll={false} aria-label="Next page"><ChevronRight size={18} /></Link> : <span aria-disabled="true" aria-label="Next page"><ChevronRight size={18} /></span>}
+            </nav>
           </div>
         </section>
 
