@@ -8,9 +8,10 @@ import {
   BarChart3,
   Boxes,
   Building2,
+  CalendarDays,
   FileSpreadsheet,
   FileText,
-  Gauge,
+  House,
   KeyRound,
   LogOut,
   Menu,
@@ -26,11 +27,11 @@ type AppShellUser = {
 };
 
 const navItems = [
-  { icon: Gauge, label: "Dashboard", href: "/dashboard" },
+  { icon: House, label: "Overview", href: "/dashboard" },
   { icon: FileText, label: "Contracts", href: "/contracts" },
   { icon: Boxes, label: "Assets", href: "/assets" },
   { icon: Building2, label: "Customers", href: "/customers" },
-  { icon: Upload, label: "Import Data", href: "/import" },
+  { icon: Upload, label: "Import", href: "/import" },
   { icon: Search, label: "Search", href: "/search" },
   { icon: KeyRound, label: "Licenses", href: "/licenses" },
   { icon: BarChart3, label: "Reports", href: "/api/reports/contracts?format=xlsx" },
@@ -82,6 +83,13 @@ export default function AppShellClient({
   const preservedSearchParams = Array.from(searchParams.entries()).filter(
     ([key]) => key !== "search" && key !== "q"
   );
+  const headerDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
 
   return (
     <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
@@ -151,12 +159,12 @@ export default function AppShellClient({
 
       <div className="app-main-area">
         <header className="app-topbar">
-          <div className="app-breadcrumb" aria-label="Breadcrumb">
-            <span>iTAS BackOffice</span>
-            <strong>{pageLabel}</strong>
+          <div className="app-product-title">
+            <strong>iTAS BackOffice</strong>
+            <span>Asset &amp; Maintenance Contract Management</span>
           </div>
 
-          <form method="GET" action={topSearchAction} className="app-top-search">
+          <form method="GET" action={topSearchAction} className={`app-top-search ${pathname === "/dashboard" ? "is-hidden" : ""}`}>
             {isLocalSearchPage &&
               preservedSearchParams.map(([key, value]) => (
                 <input key={`${key}-${value}`} type="hidden" name={key} value={value} />
@@ -178,6 +186,10 @@ export default function AppShellClient({
           </form>
 
           <div className="app-top-actions">
+            <div className="app-header-date">
+              <CalendarDays size={19} aria-hidden="true" />
+              <span>{headerDate}</span>
+            </div>
             <div className="app-live-badge">
               <span />
               System Online
