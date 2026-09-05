@@ -425,3 +425,31 @@ a {
     background: #fff !important;
   }
 }
+
+/* Refined application shell */
+.app-shell { --sidebar-width: 184px; background: #f4f7fb; }
+.app-sidebar { background: #071a33; }
+.app-sidebar-head { min-height: 96px; padding: 18px 12px; }
+.app-logo { min-width: 106px; padding: 6px 8px; border-radius: 6px; }
+.app-section-label { padding: 14px 18px 8px; }
+.app-nav { padding: 0 12px; }
+.app-nav-item { min-height: 42px; padding: 9px 12px; border-radius: 6px; color: #d5e0ef; font-size: 13px; }
+.app-nav-item.active { background: #87233f; color: #fff; }
+.app-signout { justify-content: flex-start; border: 0; background: transparent; }
+.app-topbar { grid-template-columns: minmax(260px, 1fr) minmax(260px, 420px) auto; min-height: 72px; padding: 0 28px; background: #fff; }
+.app-product-title { display: grid; gap: 2px; min-width: 0; color: #102445; }
+.app-product-title strong { font-size: 13px; font-weight: 800; }
+.app-product-title span { color: #8192ad; font-size: 10px; }
+.app-top-search.is-hidden { visibility: hidden; }
+.app-header-date { display: flex; align-items: center; gap: 8px; padding-right: 16px; border-right: 1px solid #e2e8f0; color: #17355d; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.app-header-date svg { color: #345982; }
+
+@media (max-width: 1080px) {
+  .app-header-date { display: none; }
+  .app-topbar { grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr) auto; }
+}
+
+@media (max-width: 720px) {
+  .app-product-title { display: none; }
+  .app-top-search.is-hidden { display: none; }
+}
