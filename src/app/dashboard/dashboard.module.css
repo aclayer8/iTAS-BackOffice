@@ -4,3 +4,52 @@
 .tableSection{margin-top:16px;overflow:hidden;border:1px solid #e0e8f2;border-radius:7px;background:#fff}.tableHeader{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:48px;padding:10px 16px}.tableHeader>div{display:flex;align-items:baseline;gap:7px}.tableHeader h2{margin:0;font-size:15px}.tableHeader span{color:#7286a6;font-size:11px}.tableHeader>a{display:inline-flex;align-items:center;gap:6px;color:#0863ed;font-size:11px;font-weight:700;text-decoration:none}.tableScroll{overflow-x:auto}.tableSection table{width:100%;min-width:1120px;border-collapse:collapse;font-size:11px}.tableSection th{padding:10px 12px;background:#eaf0f7;color:#4d6486;text-align:left;white-space:nowrap}.tableSection td{max-width:220px;padding:9px 12px;overflow:hidden;border-bottom:1px solid #e5ebf3;color:#294465;text-overflow:ellipsis;white-space:nowrap}.tableSection tbody tr:nth-child(even){background:#f8fafc}.tableSection tbody tr:hover{background:#f0f5fb}.tableSection td:first-child a{color:#0766e9;font-weight:700;text-decoration:none}.customer{font-weight:650}.daysExpired{color:#e52330!important;font-weight:750}.daysWarning{color:#d77a00!important;font-weight:750}.daysHealthy{color:#079b57!important;font-weight:750}.status{display:inline-flex;padding:3px 9px;border-radius:999px;font-size:9px;font-weight:800}.statusACTIVE{background:#dff7e9;color:#078d4e}.statusEXPIRED{background:#ffe6e8;color:#df1f2d}.statusPENDING_RENEWAL{background:#fff0d8;color:#b56800}.rowAction{display:grid;width:28px;height:28px;place-items:center;border-radius:4px;color:#19385f}.rowAction:hover{background:#e3ebf5}.empty{padding:34px!important;color:#7488a8!important;text-align:center}
 .footer{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-top:48px;color:#687e9e;font-size:10px}.footer strong,.footer span{display:block}.footer strong{color:#24466f;font-style:italic}.footer span{margin-top:2px}.footer p{display:flex;align-items:center;gap:12px;margin:0;color:#29496e;font-style:italic;font-weight:700}.footer i{width:18px;height:2px;background:#ed2634}
 @media(max-width:1180px){.focusGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.focusGrid>div{padding:0;border-left:0}.focusGrid>svg{display:none}.summaryBand{grid-template-columns:repeat(2,minmax(0,1fr))}.summaryTitle{grid-column:1/-1;border-bottom:1px solid #dfe7f1}.summaryItem:nth-of-type(odd){border-left:0}}@media(max-width:720px){.page{padding:18px 14px}.intro h1{font-size:21px}.searchRow{grid-template-columns:1fr}.searchForm{grid-template-columns:32px minmax(0,1fr)}.searchForm button{grid-column:1/-1;min-height:42px}.addButton{min-height:48px}.focusGrid,.summaryBand{grid-template-columns:1fr}.summaryItem{border-top:1px solid #dfe7f1;border-left:0}.tableHeader{align-items:flex-start}.tableHeader>div{display:block}.footer{padding-top:28px}.footer p{display:none}}
+
+/* Reference typography: explicit heading weights survive the base CSS reset. */
+.intro h1 { font-size: 28px; font-weight: 800; }
+.intro p { font-size: 16px; line-height: 1.5; }
+.searchForm input, .searchForm button, .addButton { font-size: 17px; }
+.focusContract { padding: 18px 20px 22px; }
+.focusHeading { font-size: 14px; }
+.focusGrid span { font-size: 13px; }
+.focusGrid strong { font-size: 14px; font-weight: 700; }
+.focusIdentity strong { font-size: 22px; font-weight: 800; }
+.focusGrid span, .focusGrid strong { white-space: normal; overflow-wrap: anywhere; }
+.summaryBand { grid-template-columns: 260px repeat(4, minmax(0, 1fr)); }
+.summaryTitle h2, .tableHeader h2 { font-size: 20px; font-weight: 750; line-height: 1.35; }
+.summaryTitle p, .summaryItem > div > span { font-size: 14px; }
+.summaryItem { min-height: 108px; }
+.summaryItem strong { font-size: 28px; font-weight: 750; }
+.summaryItem small { font-size: 12px; }
+.summaryIcon { width: 46px; height: 46px; flex-basis: 46px; }
+.tableHeader { min-height: 56px; }
+.tableHeader > div { flex-wrap: wrap; }
+.tableHeader span, .tableHeader > a { font-size: 14px; }
+.tableHeader > a { flex-shrink: 0; font-weight: 600; }
+.tableSection table { font-size: 14px; }
+.tableSection th { font-size: 13px; font-weight: 700; }
+.tableSection td { padding-block: 10px; }
+.tableSection td:first-child a { font-weight: 500; }
+.customer { font-weight: 500; }
+.status { font-size: 12px; font-weight: 600; }
+.footer { font-size: 12px; }
+.tableFooter { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 20px; color: #526987; font-size: 14px; }
+.pagination, .pageGroup { display: flex; align-items: center; gap: 6px; }
+.pagination a, .pagination > span[aria-disabled], .ellipsis { display: grid; place-items: center; min-width: 36px; height: 36px; border-radius: 6px; text-decoration: none; color: #17355d; }
+.pagination a:hover { background: #eaf0f7; }
+.pagination a[aria-current="page"] { background: #10294d; color: #fff; font-weight: 700; }
+.pagination > span[aria-disabled] { opacity: .4; }
+.page a:focus-visible, .page button:focus-visible { outline: 3px solid #4e80ea; outline-offset: 3px; }
+.searchForm:focus-within { outline: 2px solid #4e80ea; outline-offset: 2px; }
+@media (max-width: 1180px) { .summaryBand { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .intro h1 { font-size: 24px; }
+  .summaryBand { grid-template-columns: 1fr; }
+  .tableHeader { flex-wrap: wrap; }
+  .tableFooter { padding: 14px; }
+  .pagination, .pageGroup { gap: 2px; }
+  .pagination a, .pagination > span[aria-disabled], .ellipsis { min-width: 30px; }
+}
+.searchForm { grid-template-columns: 52px minmax(0, 1fr) 108px; }
+.searchForm input { padding-left: 8px; }
+@media (max-width: 720px) { .searchForm { grid-template-columns: 52px minmax(0, 1fr); } }
