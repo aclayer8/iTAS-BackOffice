@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { Eye } from "lucide-react";
 import { notFound } from "next/navigation";
 import ContractItemsEditor from "./ContractItemsEditor";
 
@@ -275,6 +276,14 @@ export default async function ContractDetailPage({
           padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontSize: "16px", fontWeight: 600,
         }}>
           ← กลับรายการ
+        </Link>
+        <Link href={`/contracts/${contract.id}/print`} style={{
+          display: "inline-flex", alignItems: "center", gap: "8px",
+          backgroundColor: "#1E3A5F", color: "white",
+          padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontSize: "16px", fontWeight: 600,
+        }}>
+          <Eye size={18} aria-hidden="true" />
+          Preview / Print
         </Link>
         {assets.length > 0 && (
           <Link href={`/assets?customer=${encodeURIComponent(contract.customer.companyName)}`} style={{
