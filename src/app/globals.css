@@ -405,3 +405,23 @@ a {
     display: none;
   }
 }
+
+@media print {
+  .app-sidebar,
+  .app-topbar {
+    display: none !important;
+  }
+
+  .app-main-area {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  html,
+  body,
+  .app-shell,
+  .app-content {
+    width: 100% !important;
+    background: #fff !important;
+  }
+}
