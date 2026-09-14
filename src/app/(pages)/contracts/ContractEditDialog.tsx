@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Save, X } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 
 const SLA_TYPES = ["ONSITE_NBD", "ONSITE_4HR", "REMOTE_NBD", "REMOTE_4HR", "BEST_EFFORT", "CUSTOM"] as const;
 const SUPPORT_TYPES = ["BUSINESS_HOURS", "EXTENDED", "TWENTYFOUR_SEVEN", "CUSTOM"] as const;
@@ -127,6 +127,15 @@ export default function ContractEditDialog({
   const [items, setItems] = useState<ContractItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
 
+  const closeDialog = useCallback(() => {
+    if (saving) return;
+    setOpen(false);
+    setForm(null);
+    setItems([]);
+    setError("");
+    window.requestAnimationFrame(() => triggerRef.current?.focus());
+  }, [saving]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -142,7 +151,7 @@ export default function ContractEditDialog({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, saving]);
+  }, [closeDialog, open, saving]);
 
   useEffect(() => {
     if (open && form) firstInputRef.current?.focus();
@@ -150,15 +159,6 @@ export default function ContractEditDialog({
 
   function setField<K extends keyof ContractForm>(field: K, value: ContractForm[K]) {
     setForm((current) => current ? { ...current, [field]: value } : current);
-  }
-
-  function closeDialog() {
-    if (saving) return;
-    setOpen(false);
-    setForm(null);
-    setItems([]);
-    setError("");
-    window.requestAnimationFrame(() => triggerRef.current?.focus());
   }
 
   async function openDialog() {

@@ -9,7 +9,6 @@ import {
   Boxes,
   Building2,
   CalendarDays,
-  FileSpreadsheet,
   FileText,
   House,
   KeyRound,
@@ -164,7 +163,7 @@ export default function AppShellClient({
             <span>Asset &amp; Maintenance Contract Management</span>
           </div>
 
-          <form method="GET" action={topSearchAction} className={`app-top-search ${pathname === "/dashboard" ? "is-hidden" : ""}`}>
+          <form method="GET" action={topSearchAction} className={`app-top-search ${pathname === "/dashboard" || pathname === "/contracts" ? "is-hidden" : ""}`}>
             {isLocalSearchPage &&
               preservedSearchParams.map(([key, value]) => (
                 <input key={`${key}-${value}`} type="hidden" name={key} value={value} />
