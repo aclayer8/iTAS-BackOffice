@@ -10,8 +10,6 @@ export default function MoveCustomerButton({ sourceId, sourceName }: { sourceId:
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch]       = useState("");
   const [selected, setSelected]   = useState<Customer | null>(null);
-  const [preview, setPreview]     = useState<{ contracts: number; assets: number; sites: number; licenses: number } | null>(null);
-  const [loading, setLoading]     = useState(false);
   const [moving, setMoving]       = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -22,20 +20,9 @@ export default function MoveCustomerButton({ sourceId, sourceName }: { sourceId:
         .then(d => setCustomers((d.data?.data ?? []).filter((c: Customer) => c.id !== sourceId)));
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      setSearch(""); setSelected(null); setPreview(null);
+      setSearch(""); setSelected(null);
     }
   }, [open, sourceId]);
-
-  useEffect(() => {
-    if (!selected) { setPreview(null); return; }
-    // Fetch counts for source customer
-    Promise.all([
-      fetch(`/api/customers/${sourceId}`).then(r => r.json()),
-    ]).then(() => {
-      // We'll get exact counts from the merge response; show estimate from customer data
-      setPreview({ contracts: -1, assets: -1, sites: -1, licenses: -1 });
-    });
-  }, [selected, sourceId]);
 
   const filtered = customers.filter(c =>
     c.companyName.toLowerCase().includes(search.toLowerCase()) ||

@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import * as XLSX from "xlsx";
 
 interface Customer {
@@ -187,7 +188,7 @@ function NewContractForm() {
 
         {/* Header */}
         <div style={{ marginBottom: "24px" }}>
-          <a href="/contracts" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Contracts</a>
+          <Link href="/contracts" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Contracts</Link>
           <h1 style={{ margin: "8px 0 0", color: "#1E3A5F", fontSize: "24px", fontWeight: 800 }}>
             สร้าง Certification of Maintenance Service
           </h1>

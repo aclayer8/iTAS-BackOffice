@@ -69,36 +69,9 @@ function findRowWith(rows: unknown[][], keyword: string): number {
   );
 }
 
-/** Find value in a row: look for a cell matching label, return next non-empty cell value */
-function extractAfterLabel(
-  row: unknown[],
-  label: string
-): string {
-  const lbl = label.toLowerCase();
-  for (let i = 0; i < row.length - 1; i++) {
-    if (cellStr(row[i]).toLowerCase().includes(lbl)) {
-      // Return first non-empty cell after it (skip ':' separators)
-      for (let j = i + 1; j < row.length; j++) {
-        const v = cellStr(row[j]);
-        if (v && v !== ":") return v;
-      }
-    }
-  }
-  return "";
-}
-
 /** Get col D value (index 3) which is the standard value column */
 function colDValue(row: unknown[]): string {
   return cellStr(row[3]) || cellStr(row[4]) || "";
-}
-
-/** Get value from the rightmost non-empty cell in a row after a position */
-function rightmostValue(row: unknown[], fromCol: number): string {
-  for (let i = row.length - 1; i >= fromCol; i--) {
-    const v = cellStr(row[i]);
-    if (v && v !== ":") return v;
-  }
-  return "";
 }
 
 // ─── Main Parser ─────────────────────────────────────────────────────────────
@@ -165,7 +138,7 @@ export function parseSheet(
 
   // ── PO No ─────────────────────────────────────────────────────────────────
   const poRow = raw[contractRowIdx + 1] ?? [];
-  let poNo = colDValue(poRow);
+  const poNo = colDValue(poRow);
 
   // ── Service Description ───────────────────────────────────────────────────
   const descRow = raw[contractRowIdx + 2] ?? [];

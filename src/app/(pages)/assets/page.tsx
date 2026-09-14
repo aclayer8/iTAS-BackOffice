@@ -204,7 +204,6 @@ export default async function AssetsPage({
             <tr style={{ backgroundColor: "#1E3A5F", color: "white" }}>
               {COLUMNS.map(({ label, key }) => {
                 // "Days Left" shares the warrantyEnd key but is a separate display column — skip duplicate header link
-                const isDaysLeft = label === "Days Left";
                 if (!key) {
                   return (
                     <th key={label} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>
@@ -214,7 +213,6 @@ export default async function AssetsPage({
                 }
                 // Both "Warranty End" and "Days Left" sort by the same warrantyEnd field
                 const actuallyActive = col === key;
-                const nextOrder = actuallyActive && order === "asc" ? "desc" : "asc";
                 const arrow = actuallyActive ? (order === "asc" ? " ↑" : " ↓") : " ↕";
                 return (
                   <th key={label} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>

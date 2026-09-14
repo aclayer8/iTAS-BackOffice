@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "PROSPECT", "BLACKLISTED"];
 const TIER_OPTIONS   = ["", "PLATINUM", "GOLD", "SILVER", "BRONZE"];
@@ -74,7 +75,7 @@ export default function NewCustomerPage() {
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
 
         <div style={{ marginBottom: "24px" }}>
-          <a href="/customers" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Customer Management</a>
+          <Link href="/customers" style={{ color: "#6b7280", textDecoration: "none", fontSize: "14px" }}>&larr; Customer Management</Link>
           <h1 style={{ margin: "8px 0 0", color: "#1E3A5F", fontSize: "26px", fontWeight: 800 }}>New Customer</h1>
         </div>
 
@@ -164,9 +165,9 @@ export default function NewCustomerPage() {
 
         {/* Actions */}
         <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-          <a href="/customers" style={{ backgroundColor: "white", color: "#64748b", border: "1px solid #e2e8f0", padding: "10px 24px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: 600, textDecoration: "none" }}>
+          <Link href="/customers" style={{ backgroundColor: "white", color: "#64748b", border: "1px solid #e2e8f0", padding: "10px 24px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: 600, textDecoration: "none" }}>
             ยกเลิก
-          </a>
+          </Link>
           <button onClick={save} disabled={saving} style={{ backgroundColor: "#1E3A5F", color: "white", border: "none", padding: "10px 28px", borderRadius: "8px", cursor: saving ? "not-allowed" : "pointer", fontSize: "14px", fontWeight: 600 }}>
             {saving ? "กำลังบันทึก..." : "บันทึก Customer"}
           </button>

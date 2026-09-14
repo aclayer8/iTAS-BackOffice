@@ -7,25 +7,17 @@ async function main() {
   console.log("🌱 Seeding database...");
 
   const SALT_ROUNDS = 12;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 12) {
+    throw new Error("SEED_ADMIN_PASSWORD must be set and contain at least 12 characters");
+  }
 
   const users = [
     {
-      email: "admin@itas.co.th",
+      email: process.env.SEED_ADMIN_EMAIL ?? "admin@itas.co.th",
       name: "System Admin",
-      password: "Admin@1234!",
+      password: adminPassword,
       role: "ADMIN" as const,
-    },
-    {
-      email: "sale@itas.co.th",
-      name: "Sale User",
-      password: "Sale@1234!",
-      role: "SALE" as const,
-    },
-    {
-      email: "engineer@itas.co.th",
-      name: "Engineer User",
-      password: "Engineer@1234!",
-      role: "ENGINEER" as const,
     },
   ];
 
@@ -42,7 +34,7 @@ async function main() {
         status: "ACTIVE",
       },
     });
-    console.log(`  ✅ ${u.role}: ${user.email} (password: ${u.password})`);
+    console.log(`  ✅ ${u.role}: ${user.email}`);
   }
 
   console.log("\n✅ Seed complete!");

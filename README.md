@@ -75,11 +75,11 @@ npm run dev
 # Open http://localhost:3000
 ```
 
-### Default Admin Credentials
-```
-Email:    admin@itas.co.th
-Password: Admin@1234!
-```
+### Development Admin Account
+
+Set `SEED_ADMIN_EMAIL` and a unique `SEED_ADMIN_PASSWORD` (minimum 12 characters)
+in `.env.local` before running `npm run db:seed`. The seed command never prints
+the password and does not contain a default credential.
 
 ---
 
@@ -119,7 +119,13 @@ iTAS-BackOffice/
 
 ---
 
-## Modules
+## Asset Management capabilities
+
+The BackOffice is organized as top-level modules. See [MODULES.md](./MODULES.md)
+for the launcher registry and the steps for adding another module.
+
+Release and security guidance is maintained in [DEPLOYMENT.md](./DEPLOYMENT.md)
+and [SECURITY.md](./SECURITY.md).
 
 | # | Module | Description |
 |---|---|---|

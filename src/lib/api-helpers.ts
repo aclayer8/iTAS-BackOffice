@@ -118,7 +118,12 @@ export function paginatedResponse<T>(
 export const notDeleted = { deletedAt: null };
 
 export async function softDelete(
-  model: { update: Function },
+  model: {
+    update: (args: {
+      where: { id: string };
+      data: { deletedAt: Date };
+    }) => Promise<unknown>;
+  },
   id: string
 ): Promise<void> {
   await model.update({

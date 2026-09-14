@@ -14,17 +14,15 @@ import {
   parsePagination,
   paginatedResponse,
   notDeleted,
-  createAuditLog,
 } from "@/lib/api-helpers";
 import { generateContractNumber } from "@/lib/contract-number";
 import { ContractSchema } from "@/utils/validators";
 import prisma from "@/lib/prisma";
-import type { UserRole } from "@/types";
 
 // ---- GET /api/contracts ----
 
 export async function GET(req: NextRequest) {
-  return withAuth(req, async (req, userId, role) => {
+  return withAuth(req, async (req) => {
     try {
       const url = new URL(req.url);
       const { skip, take, page, limit } = parsePagination(req);
@@ -88,7 +86,7 @@ export async function GET(req: NextRequest) {
 // ---- POST /api/contracts ----
 
 export async function POST(req: NextRequest) {
-  return withAuth(req, async (req, userId, role) => {
+  return withAuth(req, async (req, userId) => {
     try {
       const body = await req.json();
       const parsed = ContractSchema.safeParse(body);

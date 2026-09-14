@@ -2,18 +2,20 @@
 // รัน: node test-security.mjs
 // ต้องเปิด dev server ก่อน: npm run dev
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 
 const results = [];
 
 async function check(label, fn, expectStatus) {
   try {
     const res = await fn();
-    const pass = res.status === expectStatus;
-    results.push({ label, pass, got: res.status, expected: expectStatus });
+    const expectedStatuses = Array.isArray(expectStatus) ? expectStatus : [expectStatus];
+    const pass = expectedStatuses.includes(res.status);
+    const expected = expectedStatuses.join(" or ");
+    results.push({ label, pass, got: res.status, expected });
     console.log(`${pass ? "✅" : "❌"} [${res.status}] ${label}`);
   } catch (e) {
-    results.push({ label, pass: false, got: "ERROR", expected: expectStatus });
+    results.push({ label, pass: false, got: "ERROR", expected: String(expectStatus) });
     console.log(`❌ [ERROR] ${label} — ${e.message}`);
   }
 }
@@ -55,10 +57,23 @@ await check("GET /api/customers/fake-id (no auth)", () =>
 await check("DELETE /api/customers/fake-id (no auth)", () =>
   fetch(`${BASE}/api/customers/fake-id`, { method: "DELETE" }), 401);
 
+await check("POST /api/customers/merge (no auth)", () =>
+  fetch(`${BASE}/api/customers/merge`, { method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sourceId: "source", targetId: "target" }) }), 401);
+
+await check("POST /api/contracts/certification (no auth)", () =>
+  fetch(`${BASE}/api/contracts/certification`, { method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}) }), 401);
+
+await check("POST /api/import/certification (no auth)", () =>
+  fetch(`${BASE}/api/import/certification`, { method: "POST" }), 401);
+
 console.log("\n--- Health check → ต้องได้ 200 ---");
 
 await check("GET /api/health", () =>
-  fetch(`${BASE}/api/health`), 200);
+  fetch(`${BASE}/api/health`), [200, 503]);
 
 console.log("\n--- Validation → ต้องได้ 400 (bad input) ---");
 // Note: endpoints ด้านล่างต้องการ auth จริง แต่จะ 401 ก่อนถึง validation

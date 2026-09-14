@@ -19,19 +19,16 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import {
-  Boxes,
   ChevronRight,
   CircleHelp,
   Ellipsis,
-  Headphones,
   LayoutGrid,
   LogOut,
-  Settings,
-  ShieldCheck,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
+import { BACKOFFICE_MODULES, type BackofficeModule } from "@/config/modules";
 import classes from "./module-launcher.module.css";
 
 type LauncherUser = {
@@ -39,10 +36,45 @@ type LauncherUser = {
   email: string;
 };
 
-const reservedModules = Array.from({ length: 4 }, (_, index) => ({
-  id: `reserved-${index + 1}`,
-  slot: index + 3,
-}));
+const statusLabel = { available: "Available", planned: "Coming soon", reserved: "Reserved" } as const;
+const statusColor = { available: "green", planned: "blue", reserved: "gray" } as const;
+
+function ModuleCard({ module }: { module: BackofficeModule }) {
+  const Icon = module.icon;
+  const content = (
+    <Stack gap="lg" h="100%">
+      <Group justify="space-between" align="flex-start">
+        <ThemeIcon size={52} radius="md" color={module.color} variant="light"><Icon size={27} /></ThemeIcon>
+        <Badge color={statusColor[module.status]} variant="light" radius="sm">{statusLabel[module.status]}</Badge>
+      </Group>
+      <Box>
+        {module.status === "reserved" && (
+          <Text size="xs" fw={800} c="dimmed" tt="uppercase" lts="0.08em">
+            Module {String(module.slot).padStart(2, "0")}
+          </Text>
+        )}
+        <Title order={2} size="h3" mt={module.status === "reserved" ? 5 : 0}>{module.name}</Title>
+        <Text c="dimmed" size="sm" mt={7} lh={1.55}>{module.description}</Text>
+      </Box>
+      {module.href ? (
+        <Group mt="auto" justify="space-between" className={classes.openLabel}>
+          <Text size="sm" fw={750}>Open module</Text>
+          <ChevronRight size={18} />
+        </Group>
+      ) : (
+        <Text mt="auto" size="sm" fw={700} c="dimmed">
+          {module.status === "planned" ? "Planned module" : "Not configured"}
+        </Text>
+      )}
+    </Stack>
+  );
+
+  if (module.href) {
+    return <Card component={Link} href={module.href} withBorder padding="xl" radius="md" className={`${classes.moduleCard} ${classes.activeCard}`}>{content}</Card>;
+  }
+
+  return <Card component="article" withBorder padding="xl" radius="md" className={`${classes.moduleCard} ${module.status === "reserved" ? classes.reservedCard : ""}`}>{content}</Card>;
+}
 
 export default function ModuleLauncher({ user }: { user: LauncherUser }) {
   const initial = (user.name || user.email || "U").charAt(0).toUpperCase();
@@ -105,61 +137,7 @@ export default function ModuleLauncher({ user }: { user: LauncherUser }) {
           </Stack>
 
           <SimpleGrid cols={{ base: 1, xs: 2, md: 3 }} spacing={{ base: "md", sm: "lg" }}>
-            <Card component={Link} href="/dashboard" withBorder padding="xl" radius="md" className={`${classes.moduleCard} ${classes.activeCard}`}>
-              <Stack gap="lg" h="100%">
-                <Group justify="space-between" align="flex-start">
-                  <ThemeIcon size={52} radius="md" color="red" variant="light"><Boxes size={27} /></ThemeIcon>
-                  <Badge color="green" variant="light" radius="sm">Available</Badge>
-                </Group>
-                <Box>
-                  <Title order={2} size="h3">Asset Management</Title>
-                  <Text c="dimmed" size="sm" mt={7} lh={1.55}>
-                    Manage assets, maintenance contracts, customers, licenses, renewals, and reports.
-                  </Text>
-                </Box>
-                <Group mt="auto" justify="space-between" className={classes.openLabel}>
-                  <Text size="sm" fw={750}>Open module</Text>
-                  <ChevronRight size={18} />
-                </Group>
-              </Stack>
-            </Card>
-
-            <Card component="article" withBorder padding="xl" radius="md" className={classes.moduleCard}>
-              <Stack gap="lg" h="100%">
-                <Group justify="space-between" align="flex-start">
-                  <ThemeIcon size={52} radius="md" color="blue" variant="light"><Headphones size={27} /></ThemeIcon>
-                  <Badge color="blue" variant="light" radius="sm">Coming soon</Badge>
-                </Group>
-                <Box>
-                  <Title order={2} size="h3">Ticket Management</Title>
-                  <Text c="dimmed" size="sm" mt={7} lh={1.55}>
-                    A dedicated service desk workspace. The module is reserved and ready for future implementation.
-                  </Text>
-                </Box>
-                <Text mt="auto" size="sm" fw={700} c="dimmed">Planned module</Text>
-              </Stack>
-            </Card>
-
-            {reservedModules.map((module) => (
-              <Card key={module.id} component="article" withBorder padding="xl" radius="md" className={`${classes.moduleCard} ${classes.reservedCard}`}>
-                <Stack gap="lg" h="100%">
-                  <Group justify="space-between" align="flex-start">
-                    <ThemeIcon size={52} radius="md" color="gray" variant="light">
-                      {module.slot % 2 === 0 ? <ShieldCheck size={26} /> : <Settings size={26} />}
-                    </ThemeIcon>
-                    <Badge color="gray" variant="light" radius="sm">Reserved</Badge>
-                  </Group>
-                  <Box>
-                    <Text size="xs" fw={800} c="dimmed" tt="uppercase" lts="0.08em">Module {String(module.slot).padStart(2, "0")}</Text>
-                    <Title order={2} size="h3" mt={5}>Available space</Title>
-                    <Text c="dimmed" size="sm" mt={7} lh={1.55}>
-                      Reserved for a future iTAS BackOffice workflow.
-                    </Text>
-                  </Box>
-                  <Text mt="auto" size="sm" fw={700} c="dimmed">Not configured</Text>
-                </Stack>
-              </Card>
-            ))}
+            {BACKOFFICE_MODULES.map((module) => <ModuleCard key={module.id} module={module} />)}
           </SimpleGrid>
 
           <Group justify="space-between" mt={40} gap="md" className={classes.footer}>

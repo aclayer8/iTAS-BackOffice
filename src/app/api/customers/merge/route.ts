@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { serverError } from "@/lib/api-helpers";
+import { serverError, withAuth } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -8,13 +9,19 @@ export const dynamic = "force-dynamic";
 // Body: { sourceId, targetId }
 // Moves all contracts, assets, sites, licenses, attachments from source -> target
 // then soft-deletes the source customer.
-export async function POST(req: NextRequest) {
-  try {
-    const { sourceId, targetId } = await req.json();
+const MergeCustomersSchema = z.object({
+  sourceId: z.string().trim().min(1).max(100),
+  targetId: z.string().trim().min(1).max(100),
+});
 
-    if (!sourceId || !targetId) {
+async function mergeCustomers(req: NextRequest, userId: string) {
+  try {
+    const parsed = MergeCustomersSchema.safeParse(await req.json());
+
+    if (!parsed.success) {
       return NextResponse.json({ success: false, error: "sourceId and targetId required" }, { status: 400 });
     }
+    const { sourceId, targetId } = parsed.data;
     if (sourceId === targetId) {
       return NextResponse.json({ success: false, error: "Source and target must be different" }, { status: 400 });
     }
@@ -80,6 +87,18 @@ export async function POST(req: NextRequest) {
         where: { id: sourceId },
         data:  { deletedAt: new Date() },
       });
+
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: "UPDATE",
+          entityType: "customer",
+          entityId: targetId,
+          oldValues: { sourceId },
+          newValues: { targetId },
+          description: `Merged customer ${sourceId} into ${targetId}`,
+        },
+      });
     });
 
     return NextResponse.json({
@@ -91,4 +110,8 @@ export async function POST(req: NextRequest) {
     console.error("[merge POST]", error);
     return serverError(error);
   }
+}
+
+export async function POST(req: NextRequest) {
+  return withAuth(req, mergeCustomers, "customer:delete");
 }

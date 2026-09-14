@@ -5,9 +5,9 @@
 // =============================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { serverError } from "@/lib/api-helpers";
+import { serverError, withAuth } from "@/lib/api-helpers";
 import prisma from "@/lib/prisma";
-import { parseCertificationWorkbook, ParsedItem } from "@/lib/excel-parser";
+import { parseCertificationWorkbook } from "@/lib/excel-parser";
 import { generateAssetCode } from "@/lib/contract-number";
 
 export const runtime = "nodejs";
@@ -74,39 +74,23 @@ function extractModel(desc: string, partNo: string): string {
   return desc.split(",")[0].trim().slice(0, 60);
 }
 
-// suppress unused import warning
-type _ParsedItemType = ParsedItem;
-
-export async function POST(request: NextRequest) {
+async function importCertification(request: NextRequest, userId: string) {
   try {
     const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    if (!file) {
+    const file = formData.get("file");
+    if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    const maxFileSize = 25 * 1024 * 1024;
+    if (file.size === 0 || file.size > maxFileSize || !/\.(xlsx|xls)$/i.test(file.name)) {
+      return NextResponse.json({ error: "Upload a valid Excel file up to 25 MB" }, { status: 400 });
     }
 
     const forceReimport = formData.get("force") === "true";
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const sheets  = parseCertificationWorkbook(buffer);
-
-    let adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", status: "ACTIVE", deletedAt: null },
-    });
-    if (!adminUser) {
-      const bcrypt = await import("bcryptjs");
-      adminUser = await prisma.user.upsert({
-        where: { email: "admin@itas.co.th" },
-        update: {},
-        create: {
-          email: "admin@itas.co.th",
-          name: "System Admin",
-          passwordHash: await bcrypt.hash("Admin@1234!", 10),
-          role: "ADMIN",
-          status: "ACTIVE",
-        },
-      });
-    }
 
     const results = [];
 
@@ -209,7 +193,7 @@ export async function POST(request: NextRequest) {
             poNo:        sheet.poNo || null,
             soNo:        sheet.soNo || null,
             customerId:  customer.id,
-            createdById: adminUser.id,
+            createdById: userId,
             serviceDesc: sheet.serviceDesc || null,
             startDate:   contractStart,
             endDate:     contractEnd,
@@ -372,4 +356,8 @@ export async function POST(request: NextRequest) {
     console.error("[import/certification] Fatal error:", err);
     return serverError(err);
   }
+}
+
+export async function POST(request: NextRequest) {
+  return withAuth(request, importCertification, "contract:write");
 }

@@ -6,6 +6,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { authConfig } from "./auth.config";
 import prisma from "./prisma";
 import type { UserRole } from "@/types";
 
@@ -19,6 +20,7 @@ const LoginSchema = z.object({
 // ---- NextAuth Config ----
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       name: "credentials",
@@ -93,17 +95,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-
-  session: {
-    strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 hours
-  },
-
-  secret: process.env.NEXTAUTH_SECRET,
 });
 
 // ---- Password Utilities ----
