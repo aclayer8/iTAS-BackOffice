@@ -3,12 +3,11 @@
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

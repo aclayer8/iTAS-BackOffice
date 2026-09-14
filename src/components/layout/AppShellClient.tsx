@@ -95,7 +95,7 @@ export default function AppShellClient({
     <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
       <aside className="app-sidebar" aria-label="Main navigation">
         <div className="app-sidebar-head">
-          <Link href="/dashboard" className="app-logo" aria-label="Go to dashboard">
+          <Link href="/" className="app-logo" aria-label="Go to module home">
             <Image
               src="/itas-logo.png"
               alt="iTAS Solutions"
