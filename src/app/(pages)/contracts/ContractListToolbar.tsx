@@ -54,7 +54,7 @@ export default function ContractListToolbar({ filters, customers, canExport, sel
       <label className={`${styles.selectControl} ${styles.endDate}`}>
         <CalendarDays size={18} aria-hidden="true" />
         <select aria-label="End date" value={filters.endDate} disabled={pending} onChange={event => navigate({ endDate: event.target.value })}>
-          <option value="">End date</option><option value="30">Within 30 days</option><option value="60">Within 60 days</option><option value="90">Within 90 days</option><option value="overdue">Past end date</option>
+          <option value="">End date</option><option value="30">Within 30 days</option><option value="60">Within 60 days</option><option value="90">Within 90 days</option><option value="31-60">Days 31–60</option><option value="61-90">Days 61–90</option><option value="overdue">Past end date</option>
         </select><ChevronDown size={15} aria-hidden="true" />
       </label>
       <details className={styles.dropdown}>

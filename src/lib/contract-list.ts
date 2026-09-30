@@ -24,7 +24,7 @@ export function parseContractListParams(params: ContractListParams) {
     status: CONTRACT_STATUSES.find(status => status === value(params, "status")) ?? "",
     sort: CONTRACT_SORTS.find(sort => sort === value(params, "sort")) ?? "contractNo",
     order: value(params, "order") === "asc" ? "asc" as const : "desc" as const,
-    endDate: ["30", "60", "90", "overdue"].includes(value(params, "endDate")) ? value(params, "endDate") : "",
+    endDate: ["30", "60", "90", "31-60", "61-90", "overdue"].includes(value(params, "endDate")) ? value(params, "endDate") : "",
     assets: ["with", "without"].includes(value(params, "assets")) ? value(params, "assets") : "",
     endFrom,
     endTo,
@@ -38,6 +38,8 @@ export function contractListWhere(filters: ContractListFilters, now: Date): Pris
   const search = filters.search;
   const dates: Prisma.ContractWhereInput[] = [];
   if (filters.endDate === "overdue") dates.push({ endDate: { lt: now } });
+  else if (filters.endDate === "31-60") dates.push({ endDate: { gt: new Date(now.getTime() + 30 * dayMs), lte: new Date(now.getTime() + 60 * dayMs) } });
+  else if (filters.endDate === "61-90") dates.push({ endDate: { gt: new Date(now.getTime() + 60 * dayMs), lte: new Date(now.getTime() + 90 * dayMs) } });
   else if (filters.endDate) dates.push({ endDate: { gte: now, lte: new Date(now.getTime() + Number(filters.endDate) * dayMs) } });
   if (filters.endFrom) dates.push({ endDate: { gte: new Date(`${filters.endFrom}T00:00:00+07:00`) } });
   if (filters.endTo) dates.push({ endDate: { lte: new Date(`${filters.endTo}T23:59:59.999+07:00`) } });

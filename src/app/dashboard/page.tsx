@@ -82,9 +82,9 @@ export default async function DashboardPage({ searchParams }: {
   const nearestItem = nearestContract?.items[0];
   const displayName = session?.user?.name?.trim() || "User";
   const summary = [
-    { label: "Expiring within 30 days", value: within30, tone: "critical", icon: AlertCircle, note: within30 ? "Requires action" : "No immediate action" },
-    { label: "Expiring within 60 days", value: within60, tone: "warning", icon: AlertTriangle, note: "Plan renewal" },
-    { label: "Expiring within 90 days", value: within90, tone: "notice", icon: Clock3, note: "Upcoming" },
+    { label: "Expiring within 30 days", value: within30, tone: "critical", icon: AlertCircle, note: within30 ? "Requires action" : "No immediate action", href: "/contracts?endDate=30&sort=endDate&order=asc" },
+    { label: "Expiring within 60 days", value: within60, tone: "warning", icon: AlertTriangle, note: "Plan renewal", href: "/contracts?endDate=31-60&sort=endDate&order=asc" },
+    { label: "Expiring within 90 days", value: within90, tone: "notice", icon: Clock3, note: "Upcoming", href: "/contracts?endDate=61-90&sort=endDate&order=asc" },
     { label: "Active contracts", value: activeContracts, tone: "neutral", icon: FileText, note: "Not expiring soon" },
   ];
 
@@ -126,10 +126,13 @@ export default async function DashboardPage({ searchParams }: {
           <div className={styles.summaryTitle}><h2 id="expiring-summary-title">Contracts Expiring Soon</h2><p>{within30 + within60 + within90} contracts require attention</p></div>
           {summary.map((item) => {
             const Icon = item.icon;
-            return <div key={item.label} className={`${styles.summaryItem} ${styles[item.tone]}`}>
+            const content = <>
               <span className={styles.summaryIcon}><Icon size={22} /></span>
               <div><strong>{item.value.toLocaleString()}</strong><span>{item.label}</span><small>{item.note}</small></div>
-            </div>;
+            </>;
+            return item.href
+              ? <Link key={item.label} href={item.href} className={`${styles.summaryItem} ${styles[item.tone]}`} aria-label={`${item.label}: ${item.value.toLocaleString()} contracts. View filtered contracts.`}>{content}</Link>
+              : <div key={item.label} className={`${styles.summaryItem} ${styles[item.tone]}`}>{content}</div>;
           })}
         </section>
 

@@ -53,6 +53,15 @@ test('search retains serial, PO and related record predicates with soft-delete f
   assert.equal(where.AND.length,3); assert.ok(JSON.stringify(where.OR).includes('serialNumber')); assert.ok(JSON.stringify(where.OR).includes('poNo'));
   assert.equal(where.AND[2].endDate.lte.toISOString(),'2026-09-30T16:59:59.999Z');
 });
+test('dashboard expiry buckets preserve exact 30, 60 and 90 day boundaries', () => {
+  const days = value => new Date(now.getTime() + value * 86400000).toISOString();
+  const first = list.contractListWhere(filters({endDate:'30'}),now).AND[0].endDate;
+  const second = list.contractListWhere(filters({endDate:'31-60'}),now).AND[0].endDate;
+  const third = list.contractListWhere(filters({endDate:'61-90'}),now).AND[0].endDate;
+  assert.equal(first.gte.toISOString(), now.toISOString()); assert.equal(first.lte.toISOString(), days(30));
+  assert.equal(second.gt.toISOString(), days(30)); assert.equal(second.lte.toISOString(), days(60));
+  assert.equal(third.gt.toISOString(), days(60)); assert.equal(third.lte.toISOString(), days(90));
+});
 test('page numbers match reference and remain bounded for large lists', () => {
   assert.deepEqual(list.contractPageNumbers(1,26),[1,2,3,4,5,26]);
   assert.deepEqual(list.contractPageNumbers(1,4),[1,2,3,4]);

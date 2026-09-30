@@ -53,3 +53,6 @@
 .searchForm { grid-template-columns: 52px minmax(0, 1fr) 108px; }
 .searchForm input { padding-left: 8px; }
 @media (max-width: 720px) { .searchForm { grid-template-columns: 52px minmax(0, 1fr); } }
+
+.summaryItem[href] { color: inherit; text-decoration: none; transition: background-color .15s ease, box-shadow .15s ease; }
+.summaryItem[href]:hover { background: #f8fafc; box-shadow: inset 0 -3px currentColor; }
