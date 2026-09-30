@@ -126,13 +126,15 @@ export default async function DashboardPage({ searchParams }: {
           <div className={styles.summaryTitle}><h2 id="expiring-summary-title">Contracts Expiring Soon</h2><p>{within30 + within60 + within90} contracts require attention</p></div>
           {summary.map((item) => {
             const Icon = item.icon;
-            const content = <>
+            return <div key={item.label} className={`${styles.summaryItem} ${styles[item.tone]}`}>
               <span className={styles.summaryIcon}><Icon size={22} /></span>
-              <div><strong>{item.value.toLocaleString()}</strong><span>{item.label}</span><small>{item.note}</small></div>
-            </>;
-            return item.href
-              ? <Link key={item.label} href={item.href} className={`${styles.summaryItem} ${styles[item.tone]}`} aria-label={`${item.label}: ${item.value.toLocaleString()} contracts. View filtered contracts.`}>{content}</Link>
-              : <div key={item.label} className={`${styles.summaryItem} ${styles[item.tone]}`}>{content}</div>;
+              <div>
+                {item.href
+                  ? <Link href={item.href} className={styles.summaryCount} aria-label={`${item.label}: ${item.value.toLocaleString()} contracts. View filtered contracts.`}>{item.value.toLocaleString()}</Link>
+                  : <strong>{item.value.toLocaleString()}</strong>}
+                <span>{item.label}</span><small>{item.note}</small>
+              </div>
+            </div>;
           })}
         </section>
 

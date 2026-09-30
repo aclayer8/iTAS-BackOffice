@@ -54,5 +54,8 @@
 .searchForm input { padding-left: 8px; }
 @media (max-width: 720px) { .searchForm { grid-template-columns: 52px minmax(0, 1fr); } }
 
-.summaryItem[href] { color: inherit; text-decoration: none; transition: background-color .15s ease, box-shadow .15s ease; }
-.summaryItem[href]:hover { background: #f8fafc; box-shadow: inset 0 -3px currentColor; }
+.summaryCount { display: inline-flex; min-width: 44px; min-height: 36px; align-items: center; justify-content: center; padding: 4px 12px; border: 1px solid currentColor; border-radius: 6px; color: inherit; font-size: 28px; font-weight: 750; line-height: 1; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
+.summaryCount:hover { transform: translateY(-1px); box-shadow: 0 3px 8px #1024451f; }
+.critical .summaryCount { background: #fff1f2; }
+.warning .summaryCount { background: #fff6e8; }
+.notice .summaryCount { background: #fff8dc; }
