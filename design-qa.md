@@ -7,7 +7,8 @@
 
 ## Implementation review
 
-- The 30, 60, and 90-day counts are rendered as distinct, tone-matched link buttons.
+- The 30, 60, and 90-day counts are rendered as distinct, tone-matched filter buttons.
+- Selecting a count filters the Overview table in place, shows the selected state and filter chip, and preserves the filter through pagination.
 - The existing layout, icons, labels, summary counts, and responsive grid are preserved.
 - Each link has a descriptive accessible name and existing focus-visible treatment.
 - Hover treatment adds elevation without changing the surrounding card layout.

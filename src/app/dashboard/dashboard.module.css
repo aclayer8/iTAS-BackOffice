@@ -56,6 +56,12 @@
 
 .summaryCount { display: inline-flex; min-width: 44px; min-height: 36px; align-items: center; justify-content: center; padding: 4px 12px; border: 1px solid currentColor; border-radius: 6px; color: inherit; font-size: 28px; font-weight: 750; line-height: 1; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
 .summaryCount:hover { transform: translateY(-1px); box-shadow: 0 3px 8px #1024451f; }
+.summaryCount[aria-current="true"] { box-shadow: 0 0 0 3px #4e80ea33; }
 .critical .summaryCount { background: #fff1f2; }
 .warning .summaryCount { background: #fff6e8; }
 .notice .summaryCount { background: #fff8dc; }
+.critical .summaryCount[aria-current="true"] { color: #fff; background: #ed2634; }
+.warning .summaryCount[aria-current="true"] { color: #fff; background: #df8100; }
+.notice .summaryCount[aria-current="true"] { color: #fff; background: #b77800; }
+.activeFilter { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; color: #174ea6; background: #e8f0fe; font-size: 12px; font-weight: 650; line-height: 1.2; text-decoration: none; }
+.activeFilter:hover { background: #dbe8fd; }

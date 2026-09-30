@@ -31,7 +31,7 @@ function greeting() {
 }
 
 export default async function DashboardPage({ searchParams }: {
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<{ page?: string | string[]; expiry?: string | string[] }>;
 }) {
   const session = await auth();
   const now = new Date();
@@ -41,16 +41,25 @@ export default async function DashboardPage({ searchParams }: {
 
   const params = await searchParams;
   const requestedPage = typeof params.page === "string" && /^\d+$/.test(params.page) ? Number(params.page) : 1;
+  const selectedExpiry = typeof params.expiry === "string" && ["30", "60", "90"].includes(params.expiry)
+    ? params.expiry as "30" | "60" | "90"
+    : "";
   const pageSize = 10;
   const attentionWhere: Prisma.ContractWhereInput = {
     deletedAt: null, endDate: { lte: in90 }, status: { in: ["ACTIVE", "PENDING_RENEWAL", "EXPIRED"] },
   };
+  const expiryWindows: Record<"30" | "60" | "90", { label: string; where: Prisma.ContractWhereInput }> = {
+    "30": { label: "0–30 days", where: { deletedAt: null, status: "ACTIVE", endDate: { gte: now, lte: in30 } } },
+    "60": { label: "31–60 days", where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in30, lte: in60 } } },
+    "90": { label: "61–90 days", where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in60, lte: in90 } } },
+  };
+  const tableWhere = selectedExpiry ? expiryWindows[selectedExpiry].where : attentionWhere;
   const [within30, within60, within90, activeContracts, totalItems, nearestContract] = await Promise.all([
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gte: now, lte: in30 } } }),
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in30, lte: in60 } } }),
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in60, lte: in90 } } }),
     prisma.contract.count({ where: { deletedAt: null, status: "ACTIVE", endDate: { gt: in90 } } }),
-    prisma.contract.count({ where: attentionWhere }),
+    prisma.contract.count({ where: tableWhere }),
     prisma.contract.findFirst({
       where: { ...attentionWhere, endDate: { gte: now, lte: in90 } },
       orderBy: [{ endDate: "asc" }, { id: "asc" }],
@@ -65,7 +74,7 @@ export default async function DashboardPage({ searchParams }: {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const currentPage = Math.min(totalPages, Math.max(1, Number.isSafeInteger(requestedPage) ? requestedPage : 1));
   const attentionContracts = await prisma.contract.findMany({
-    where: attentionWhere,
+    where: tableWhere,
     orderBy: [{ endDate: "desc" }, { id: "asc" }],
     skip: (currentPage - 1) * pageSize,
     take: pageSize,
@@ -82,11 +91,14 @@ export default async function DashboardPage({ searchParams }: {
   const nearestItem = nearestContract?.items[0];
   const displayName = session?.user?.name?.trim() || "User";
   const summary = [
-    { label: "Expiring within 30 days", value: within30, tone: "critical", icon: AlertCircle, note: within30 ? "Requires action" : "No immediate action", href: "/contracts?endDate=30&sort=endDate&order=asc" },
-    { label: "Expiring within 60 days", value: within60, tone: "warning", icon: AlertTriangle, note: "Plan renewal", href: "/contracts?endDate=31-60&sort=endDate&order=asc" },
-    { label: "Expiring within 90 days", value: within90, tone: "notice", icon: Clock3, note: "Upcoming", href: "/contracts?endDate=61-90&sort=endDate&order=asc" },
+    { label: "Expiring within 30 days", value: within30, tone: "critical", icon: AlertCircle, note: within30 ? "Requires action" : "No immediate action", expiry: "30" as const },
+    { label: "Expiring within 60 days", value: within60, tone: "warning", icon: AlertTriangle, note: "Plan renewal", expiry: "60" as const },
+    { label: "Expiring within 90 days", value: within90, tone: "notice", icon: Clock3, note: "Upcoming", expiry: "90" as const },
     { label: "Active contracts", value: activeContracts, tone: "neutral", icon: FileText, note: "Not expiring soon" },
   ];
+  const pageHref = (page: number) => `/dashboard?${new URLSearchParams({
+    ...(selectedExpiry ? { expiry: selectedExpiry } : {}), page: String(page),
+  })}`;
 
   return (
     <AppShell>
@@ -129,8 +141,8 @@ export default async function DashboardPage({ searchParams }: {
             return <div key={item.label} className={`${styles.summaryItem} ${styles[item.tone]}`}>
               <span className={styles.summaryIcon}><Icon size={22} /></span>
               <div>
-                {item.href
-                  ? <Link href={item.href} className={styles.summaryCount} aria-label={`${item.label}: ${item.value.toLocaleString()} contracts. View filtered contracts.`}>{item.value.toLocaleString()}</Link>
+                {item.expiry
+                  ? <Link href={selectedExpiry === item.expiry ? "/dashboard" : `/dashboard?expiry=${item.expiry}`} scroll={false} className={styles.summaryCount} aria-current={selectedExpiry === item.expiry ? "true" : undefined} aria-label={`${item.label}: ${item.value.toLocaleString()} contracts. ${selectedExpiry === item.expiry ? "Clear filter." : "Filter the Overview table."}`}>{item.value.toLocaleString()}</Link>
                   : <strong>{item.value.toLocaleString()}</strong>}
                 <span>{item.label}</span><small>{item.note}</small>
               </div>
@@ -140,7 +152,9 @@ export default async function DashboardPage({ searchParams }: {
 
         <section className={styles.tableSection}>
           <div className={styles.tableHeader}>
-            <div><h2>Contracts Expiring Within 90 Days</h2><span>({totalItems.toLocaleString()} items)</span></div>
+            <div><h2>{selectedExpiry ? `Contracts Expiring in ${expiryWindows[selectedExpiry].label}` : "Contracts Expiring Within 90 Days"}</h2><span>({totalItems.toLocaleString()} items)</span>
+              {selectedExpiry && <Link href="/dashboard" scroll={false} className={styles.activeFilter}>Filtered: {expiryWindows[selectedExpiry].label} <span aria-hidden="true">×</span><span className="sr-only">Clear filter</span></Link>}
+            </div>
             <Link href="/contracts?sort=endDate&order=asc">View all contracts <ArrowRight size={16} /></Link>
           </div>
           <div className={styles.tableScroll}>
@@ -164,19 +178,19 @@ export default async function DashboardPage({ searchParams }: {
                     <td><Link className={styles.rowAction} href={`/contracts/${contract.id}`} aria-label={`Open ${contract.contractNo}`}><MoreHorizontal size={19} /></Link></td>
                   </tr>;
                 })}
-                {!attentionContracts.length && <tr><td colSpan={10} className={styles.empty}>No contracts require attention within 90 days.</td></tr>}
+                {!attentionContracts.length && <tr><td colSpan={10} className={styles.empty}>{selectedExpiry ? `No contracts expire in ${expiryWindows[selectedExpiry].label}.` : "No contracts require attention within 90 days."}</td></tr>}
               </tbody>
             </table>
           </div>
           <div className={styles.tableFooter}>
             <span role="status">Showing {attentionContracts.length} of {totalItems.toLocaleString()} items</span>
             <nav className={styles.pagination} aria-label="Contract pagination">
-              {currentPage > 1 ? <Link href={`/dashboard?page=${currentPage - 1}`} scroll={false} aria-label="Previous page"><ChevronLeft size={18} /></Link> : <span aria-disabled="true" aria-label="Previous page"><ChevronLeft size={18} /></span>}
+              {currentPage > 1 ? <Link href={pageHref(currentPage - 1)} scroll={false} aria-label="Previous page"><ChevronLeft size={18} /></Link> : <span aria-disabled="true" aria-label="Previous page"><ChevronLeft size={18} /></span>}
               {pageNumbers.map((page, index) => <span className={styles.pageGroup} key={page}>
                 {index > 0 && page - pageNumbers[index - 1] > 1 && <span className={styles.ellipsis}>…</span>}
-                <Link href={`/dashboard?page=${page}`} scroll={false} aria-label={`Page ${page}`} aria-current={page === currentPage ? "page" : undefined}>{page}</Link>
+                <Link href={pageHref(page)} scroll={false} aria-label={`Page ${page}`} aria-current={page === currentPage ? "page" : undefined}>{page}</Link>
               </span>)}
-              {currentPage < totalPages ? <Link href={`/dashboard?page=${currentPage + 1}`} scroll={false} aria-label="Next page"><ChevronRight size={18} /></Link> : <span aria-disabled="true" aria-label="Next page"><ChevronRight size={18} /></span>}
+              {currentPage < totalPages ? <Link href={pageHref(currentPage + 1)} scroll={false} aria-label="Next page"><ChevronRight size={18} /></Link> : <span aria-disabled="true" aria-label="Next page"><ChevronRight size={18} /></span>}
             </nav>
           </div>
         </section>
