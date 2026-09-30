@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 const ITEM_TYPES = ["HARDWARE", "LICENSE", "SUBSCRIPTION", "SERVICE", "SUPPORT"] as const;
 const SLA_OPTIONS = ["8x5 NBD", "8x5xNBD", "8x5x4", "24x7xNBD", "24x7x4", "Best Effort"] as const;
@@ -132,10 +133,12 @@ export default function ContractItemsEditor({
   contractId,
   items,
   assets,
+  licenseAction,
 }: {
   contractId: string;
   items: ContractItemRow[];
   assets: AssetRow[];
+  licenseAction?: ReactNode;
 }) {
   const router = useRouter();
   const [editingItem, setEditingItem] = useState<ContractItemRow | null>(null);
@@ -273,6 +276,7 @@ export default function ContractItemsEditor({
                 {message}
               </div>
             )}
+            {licenseAction}
             <button
               type="button"
               onClick={openCreate}

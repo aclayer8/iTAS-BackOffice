@@ -3,6 +3,10 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import { notFound } from "next/navigation";
 import ContractItemsEditor from "./ContractItemsEditor";
+import { AddLicenseButton, ContractLicensePanel } from "./ContractLicenseManager";
+import { auth } from "@/lib/auth";
+import { hasPermission } from "@/lib/rbac";
+import type { UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +45,7 @@ export default async function ContractDetailPage({
   searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const session = await auth();
   const { from } = await searchParams;
   const backHref  = from ?? "/contracts";
   const backLabel = from?.startsWith("/customers") ? "← Customer" : "← Contracts";
@@ -51,6 +56,11 @@ export default async function ContractDetailPage({
       customer: true,
       items: {
         orderBy: { sortOrder: "asc" },
+      },
+      licenses: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        include: { files: { orderBy: { createdAt: "desc" } } },
       },
     },
   });
@@ -101,6 +111,21 @@ export default async function ContractDetailPage({
     model: asset.model,
   }));
   const assetBySN = new Map(assets.map((a) => [a.serialNumber?.toLowerCase() ?? "", a]));
+  const canAddLicense = hasPermission((session?.user?.role ?? "VIEWER") as UserRole, "license:write");
+  const licenseRows = contract.licenses.map(license => ({
+    id: license.id,
+    licenseName: license.licenseName,
+    vendor: license.vendor,
+    product: license.product,
+    edition: license.edition,
+    quantity: license.quantity,
+    unit: license.unit,
+    startDate: license.startDate?.toISOString() ?? null,
+    endDate: license.endDate?.toISOString() ?? null,
+    renewalStatus: license.renewalStatus,
+    note: license.note,
+    files: license.files.map(file => ({ id: file.id, fileName: file.fileName, fileSize: file.fileSize, mimeType: file.mimeType })),
+  }));
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
@@ -168,7 +193,9 @@ export default async function ContractDetailPage({
         </div>
       </div>
 
-      <ContractItemsEditor contractId={contract.id} items={itemRows} assets={assetRows} />
+      <ContractItemsEditor contractId={contract.id} items={itemRows} assets={assetRows}
+        licenseAction={canAddLicense ? <AddLicenseButton contractId={contract.id} /> : undefined} />
+      <ContractLicensePanel licenses={licenseRows} />
 
       {/* Items table */}
       <div style={{ display: "none" }}>

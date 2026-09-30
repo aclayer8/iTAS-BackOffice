@@ -125,6 +125,7 @@ export type AssetInput = z.infer<typeof AssetSchema>;
 // ---- License ----
 
 export const LicenseSchema = z.object({
+  contractId:    z.string().cuid().optional().nullable(),
   licenseName:   z.string().min(2, "License name required").max(200),
   licenseKey:    z.string().max(500).optional().nullable(),
   vendor:        z.string().max(100).optional().nullable(),
