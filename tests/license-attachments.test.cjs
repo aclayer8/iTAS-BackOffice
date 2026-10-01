@@ -15,6 +15,29 @@ function load(file) {
 
 const storage = load('src/lib/s3.ts');
 
+test('storage config prefers Neon AWS variables and keeps the private bucket default', () => {
+  const config = storage.resolveStorageConfig({
+    NODE_ENV: 'production',
+    AWS_ENDPOINT_URL_S3: 'https://storage.example.test',
+    AWS_REGION: 'ap-southeast-1',
+    AWS_ACCESS_KEY_ID: 'test-access-key',
+    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+  });
+  assert.equal(config.endpoint, 'https://storage.example.test/');
+  assert.equal(config.bucket, 'itas-license-files');
+  assert.equal(config.region, 'ap-southeast-1');
+});
+
+test('storage config rejects an insecure production endpoint', () => {
+  assert.throws(() => storage.resolveStorageConfig({
+    NODE_ENV: 'production',
+    AWS_ENDPOINT_URL_S3: 'http://storage.example.test',
+    AWS_REGION: 'ap-southeast-1',
+    AWS_ACCESS_KEY_ID: 'test-access-key',
+    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+  }), /must use HTTPS/);
+});
+
 test('license attachment validation requires matching allowlisted MIME and extension', () => {
   assert.equal(storage.validateLicenseFile('license.pdf', 'application/pdf', 1024), null);
   assert.equal(storage.validateLicenseFile('evidence.JPG', 'image/jpeg', 1024), null);
