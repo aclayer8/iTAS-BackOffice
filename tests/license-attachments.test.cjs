@@ -15,6 +15,15 @@ function load(file) {
 
 const storage = load('src/lib/s3.ts');
 
+test('license update endpoint enforces write permission and records an audit event', () => {
+  const route = fs.readFileSync(path.join(__dirname, '..', 'src/app/api/licenses/[id]/route.ts'), 'utf8');
+  assert.match(route, /export async function PATCH/);
+  assert.match(route, /"license:write"/);
+  assert.match(route, /action: "UPDATE"/);
+  assert.match(route, /oldValues:/);
+  assert.match(route, /newValues:/);
+});
+
 test('storage config prefers Neon AWS variables and keeps the private bucket default', () => {
   const config = storage.resolveStorageConfig({
     NODE_ENV: 'production',

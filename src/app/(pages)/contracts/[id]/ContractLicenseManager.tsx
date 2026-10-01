@@ -1,7 +1,7 @@
 "use client";
 
 import { ActionIcon, Alert, Badge, Button, FileInput, Group, Image, List, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip } from "@mantine/core";
-import { Eye, File, ImageIcon, KeyRound, Upload } from "lucide-react";
+import { Eye, File, ImageIcon, KeyRound, Pencil, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -18,6 +18,15 @@ export type ContractLicenseRow = {
   quantity: number | null; unit: string | null; startDate: string | null; endDate: string | null;
   renewalStatus: string; note: string | null; files: LicenseFile[];
 };
+
+type LicenseFormState = {
+  licenseName: string; vendor: string; product: string; edition: string; quantity: number;
+  unit: string; startDate: string; endDate: string; renewalStatus: string; note: string;
+};
+
+function dateInputValue(value: string | null) {
+  return value ? value.slice(0, 10) : "";
+}
 
 function mimeType(file: File) {
   return file.type || MIME_BY_EXTENSION[file.name.split(".").pop()?.toLowerCase() ?? ""] || "application/octet-stream";
@@ -122,8 +131,51 @@ export function AddLicenseButton({ contractId }: { contractId: string }) {
 }
 
 export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRow[] }) {
+  const router = useRouter();
   const [preview, setPreview] = useState<{ url: string; type: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ContractLicenseRow | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [form, setForm] = useState<LicenseFormState>({ licenseName: "", vendor: "", product: "", edition: "", quantity: 1, unit: "USERS", startDate: "", endDate: "", renewalStatus: "ACTIVE", note: "" });
+
+  function openEdit(license: ContractLicenseRow) {
+    setEditing(license);
+    setEditError(null);
+    setForm({
+      licenseName: license.licenseName,
+      vendor: license.vendor ?? "",
+      product: license.product ?? "",
+      edition: license.edition ?? "",
+      quantity: license.quantity ?? 1,
+      unit: license.unit ?? "USERS",
+      startDate: dateInputValue(license.startDate),
+      endDate: dateInputValue(license.endDate),
+      renewalStatus: license.renewalStatus,
+      note: license.note ?? "",
+    });
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (form.licenseName.trim().length < 2) { setEditError("License name is required."); return; }
+    setSaving(true); setEditError(null);
+    try {
+      const response = await fetch(`/api/licenses/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, licenseName: form.licenseName.trim(), startDate: form.startDate || null, endDate: form.endDate || null }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error ?? "Unable to update license.");
+      setEditing(null);
+      router.refresh();
+    } catch (cause) {
+      setEditError(cause instanceof Error ? cause.message : "Unable to update license.");
+    } finally {
+      setSaving(false);
+    }
+  }
   async function openFile(licenseId: string, file: LicenseFile) {
     setError(null);
     const response = await fetch(`/api/licenses/${licenseId}/attachments/${file.id}`);
@@ -136,7 +188,7 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
     <Group justify="space-between" p="md"><Text fw={700} c="dark.8">Licenses ({licenses.length})</Text></Group>
     {error && <Alert color="red" m="md">{error}</Alert>}
     <Table.ScrollContainer minWidth={900}><Table striped highlightOnHover>
-      <Table.Thead><Table.Tr><Table.Th>License</Table.Th><Table.Th>Vendor / Product</Table.Th><Table.Th>Quantity</Table.Th><Table.Th>Period</Table.Th><Table.Th>Status</Table.Th><Table.Th>Files</Table.Th></Table.Tr></Table.Thead>
+      <Table.Thead><Table.Tr><Table.Th>License</Table.Th><Table.Th>Vendor / Product</Table.Th><Table.Th>Quantity</Table.Th><Table.Th>Period</Table.Th><Table.Th>Status</Table.Th><Table.Th>Files</Table.Th><Table.Th aria-label="Actions" /></Table.Tr></Table.Thead>
       <Table.Tbody>{licenses.map(license => <Table.Tr key={license.id}>
         <Table.Td><Text fw={600}>{license.licenseName}</Text>{license.edition && <Text size="xs" c="dimmed">{license.edition}</Text>}</Table.Td>
         <Table.Td>{[license.vendor, license.product].filter(Boolean).join(" / ") || "–"}</Table.Td>
@@ -144,8 +196,31 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
         <Table.Td>{license.startDate ? new Date(license.startDate).toLocaleDateString("en-GB") : "–"} – {license.endDate ? new Date(license.endDate).toLocaleDateString("en-GB") : "–"}</Table.Td>
         <Table.Td><Badge color={license.renewalStatus === "ACTIVE" ? "green" : license.renewalStatus === "EXPIRED" ? "red" : "yellow"}>{license.renewalStatus.replaceAll("_", " ")}</Badge></Table.Td>
         <Table.Td><Group gap="xs">{license.files.length || "–"}{license.files.map(file => <Tooltip key={file.id} label={`Preview ${file.fileName}`}><ActionIcon variant="subtle" aria-label={`Preview ${file.fileName}`} onClick={() => openFile(license.id, file)}><Eye size={16} /></ActionIcon></Tooltip>)}</Group></Table.Td>
+        <Table.Td><Tooltip label={`Edit ${license.licenseName}`}><ActionIcon variant="default" aria-label={`Edit ${license.licenseName}`} onClick={() => openEdit(license)}><Pencil size={15} /></ActionIcon></Tooltip></Table.Td>
       </Table.Tr>)}</Table.Tbody>
     </Table></Table.ScrollContainer>
+    <Modal opened={Boolean(editing)} onClose={() => !saving && setEditing(null)} title="Edit License" size="xl" centered closeOnClickOutside={!saving} closeOnEscape={!saving}>
+      <Stack>
+        {editError && <Alert color="red" title="Unable to save">{editError}</Alert>}
+        <SimpleGrid cols={{ base: 1, sm: 2 }}>
+          <TextInput required label="License name" value={form.licenseName} onChange={event => setForm({ ...form, licenseName: event.currentTarget.value })} maxLength={200} />
+          <TextInput label="Vendor" value={form.vendor} onChange={event => setForm({ ...form, vendor: event.currentTarget.value })} maxLength={100} />
+          <TextInput label="Product" value={form.product} onChange={event => setForm({ ...form, product: event.currentTarget.value })} maxLength={100} />
+          <TextInput label="Edition" value={form.edition} onChange={event => setForm({ ...form, edition: event.currentTarget.value })} maxLength={100} />
+          <NumberInput label="Quantity" value={form.quantity} onChange={value => setForm({ ...form, quantity: Number(value) || 1 })} min={1} max={1_000_000} />
+          <Select label="Unit" data={["USERS", "DEVICES", "CORES", "SEATS", "LICENSES"]} value={form.unit} onChange={value => setForm({ ...form, unit: value ?? "USERS" })} />
+          <TextInput type="date" label="Start date" value={form.startDate} onChange={event => setForm({ ...form, startDate: event.currentTarget.value })} />
+          <TextInput type="date" label="End date" value={form.endDate} min={form.startDate || undefined} onChange={event => setForm({ ...form, endDate: event.currentTarget.value })} />
+          <Select label="Status" data={["ACTIVE", "EXPIRING_SOON", "EXPIRED", "RENEWED", "CANCELLED"]} value={form.renewalStatus} onChange={value => setForm({ ...form, renewalStatus: value ?? "ACTIVE" })} />
+        </SimpleGrid>
+        <Textarea label="Note" value={form.note} onChange={event => setForm({ ...form, note: event.currentTarget.value })} maxLength={2000} autosize minRows={2} />
+        <Alert color="blue" variant="light">Existing license files are preserved when details are updated.</Alert>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button>
+          <Button onClick={saveEdit} loading={saving}>Save Changes</Button>
+        </Group>
+      </Stack>
+    </Modal>
     <Modal opened={Boolean(preview)} onClose={() => setPreview(null)} title={preview?.name ?? "File preview"} size="xl" centered>{preview && <Preview {...preview} name={preview.name} />}</Modal>
   </Paper>;
 }
