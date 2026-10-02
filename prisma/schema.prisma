@@ -319,6 +319,7 @@ model Contract {
   versions     Contract[]        @relation("ContractVersions")
   items        ContractItem[]
   renewals     ContractRenewal[]
+  licenses     License[]
   attachments  Attachment[]
   activities   ActivityLog[]
 
@@ -481,6 +482,7 @@ model AssetHistory {
 
 model License {
   id             String               @id @default(cuid())
+  contractId     String?              @map("contract_id")
   licenseName    String               @map("license_name")
   licenseKey     String?              @map("license_key")     // Encrypted
   vendor         String?
@@ -505,13 +507,34 @@ model License {
   customer    Customer?      @relation(fields: [customerId], references: [id])
   site        CustomerSite?  @relation(fields: [siteId], references: [id])
   vendorRel   Vendor?        @relation(fields: [vendorId], references: [id])
+  contract    Contract?      @relation(fields: [contractId], references: [id], onDelete: SetNull)
   attachments Attachment[]
+  files       LicenseAttachment[]
 
+  @@index([contractId])
   @@index([customerId])
   @@index([endDate])
   @@index([renewalStatus])
   @@index([deletedAt])
   @@map("licenses")
+}
+
+model LicenseAttachment {
+  id           String   @id @default(cuid())
+  licenseId    String   @map("license_id")
+  fileName     String   @map("file_name")
+  fileSize     Int      @map("file_size")
+  mimeType     String   @map("mime_type")
+  s3Key        String   @unique @map("s3_key")
+  s3Bucket     String   @map("s3_bucket")
+  uploadedById String   @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  license License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@index([licenseId])
+  @@index([uploadedById])
+  @@map("license_attachments")
 }
 
 // =============================================================

@@ -30,7 +30,7 @@ The **iTAS BackOffice System** is a centralized internal management platform for
 | Auth | NextAuth.js v5 + JWT |
 | Database | PostgreSQL 16 |
 | ORM | Prisma 5 |
-| Storage | S3-compatible (MinIO / AWS S3) |
+| Storage | Neon Object Storage (private, S3-compatible) |
 | PDF Gen | @react-pdf/renderer |
 | QR Code | qrcode.js |
 | Email | Nodemailer / Resend |
@@ -96,6 +96,23 @@ vercel deploy --prod
 ```
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for full production guide.
+
+### Neon Object Storage
+
+License documents are stored in the private `itas-license-files` bucket declared
+in `neon.ts`. PostgreSQL stores only file metadata and the object key; file bytes
+are never stored in the database.
+
+```bash
+neon link
+neon config plan
+neon deploy
+neon env pull
+```
+
+Copy the resulting `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and
+`AWS_SECRET_ACCESS_KEY` values into the matching Vercel environment. Keep
+`S3_BUCKET_NAME=itas-license-files`. Never commit generated credentials.
 
 ---
 

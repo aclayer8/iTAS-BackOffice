@@ -18,13 +18,17 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force && npm run db:seed",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "storage:verify": "node scripts/verify-object-storage.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1143.0",
+    "@aws-sdk/s3-request-presigner": "^3.1143.0",
     "@mantine/core": "^8.3.18",
+    "@neon/config": "^1.8.3",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "lucide-react": "^0.456.0",
