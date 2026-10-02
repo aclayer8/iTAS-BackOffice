@@ -14,6 +14,26 @@ function load(file) {
 }
 
 const storage = load('src/lib/s3.ts');
+const securityHeaders = load('src/lib/content-security-policy.ts');
+
+test('content security policy permits only the configured HTTPS storage origin', () => {
+  const policy = securityHeaders.contentSecurityPolicy({
+    NODE_ENV: 'production',
+    AWS_ENDPOINT_URL_S3: 'https://storage.example.test/branch/path?ignored=true',
+  });
+  assert.match(policy, /connect-src 'self' https:\/\/storage\.example\.test/);
+  assert.equal(policy.includes('/branch/path'), false);
+  assert.equal(policy.includes('*'), false);
+});
+
+test('content security policy rejects insecure production storage endpoints', () => {
+  const policy = securityHeaders.contentSecurityPolicy({
+    NODE_ENV: 'production',
+    AWS_ENDPOINT_URL_S3: 'http://storage.example.test',
+  });
+  assert.match(policy, /connect-src 'self'(?:;|$)/);
+  assert.equal(policy.includes('storage.example.test'), false);
+});
 
 test('license update endpoint enforces write permission and records an audit event', () => {
   const route = fs.readFileSync(path.join(__dirname, '..', 'src/app/api/licenses/[id]/route.ts'), 'utf8');
