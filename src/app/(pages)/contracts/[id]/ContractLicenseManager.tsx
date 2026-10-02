@@ -1,7 +1,7 @@
 "use client";
 
 import { ActionIcon, Alert, Badge, Button, FileInput, Group, Image, List, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip } from "@mantine/core";
-import { Eye, File, ImageIcon, KeyRound, Pencil, Upload } from "lucide-react";
+import { Eye, File, ImageIcon, KeyRound, Pencil, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -34,6 +34,25 @@ function mimeType(file: File) {
 
 function readableSize(bytes: number) {
   return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function validateSelectedFiles(files: File[]) {
+  return files.length <= 10 && files.every(file => file.size > 0 && file.size <= 25 * 1024 * 1024);
+}
+
+async function uploadLicenseFiles(licenseId: string, files: File[], onUploaded: (file: File) => void) {
+  for (const file of files) {
+    const metadata = { fileName: file.name, fileSize: file.size, mimeType: mimeType(file) };
+    const initResponse = await fetch(`/api/licenses/${licenseId}/attachments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(metadata) });
+    const init = await initResponse.json();
+    if (!initResponse.ok || !init.success) throw new Error(init.error ?? `Unable to prepare ${file.name}.`);
+    const uploadResponse = await fetch(init.data.uploadUrl, { method: "PUT", headers: { "Content-Type": metadata.mimeType }, body: file });
+    if (!uploadResponse.ok) throw new Error(`Upload failed for ${file.name}.`);
+    const completeResponse = await fetch(`/api/licenses/${licenseId}/attachments`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...metadata, s3Key: init.data.s3Key }) });
+    const complete = await completeResponse.json();
+    if (!completeResponse.ok || !complete.success) throw new Error(complete.error ?? `Unable to confirm ${file.name}.`);
+    onUploaded(file);
+  }
 }
 
 function Preview({ url, type, name }: { url: string; type: string; name: string }) {
@@ -71,7 +90,7 @@ export function AddLicenseButton({ contractId }: { contractId: string }) {
 
   async function save() {
     if (form.licenseName.trim().length < 2) { setError("License name is required."); return; }
-    if (files.length > 10 || files.some(file => file.size <= 0 || file.size > 25 * 1024 * 1024)) { setError("Select up to 10 files, maximum 25 MB each."); return; }
+    if (!validateSelectedFiles(files)) { setError("Select up to 10 files, maximum 25 MB each."); return; }
     setSaving(true); setError(null);
     try {
       let licenseId = createdLicenseId;
@@ -82,18 +101,7 @@ export function AddLicenseButton({ contractId }: { contractId: string }) {
         licenseId = result.data.id as string;
         setCreatedLicenseId(licenseId);
       }
-      for (const file of [...files]) {
-        const metadata = { fileName: file.name, fileSize: file.size, mimeType: mimeType(file) };
-        const initResponse = await fetch(`/api/licenses/${licenseId}/attachments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(metadata) });
-        const init = await initResponse.json();
-        if (!initResponse.ok || !init.success) throw new Error(init.error ?? `Unable to prepare ${file.name}.`);
-        const uploadResponse = await fetch(init.data.uploadUrl, { method: "PUT", headers: { "Content-Type": metadata.mimeType }, body: file });
-        if (!uploadResponse.ok) throw new Error(`Upload failed for ${file.name}.`);
-        const completeResponse = await fetch(`/api/licenses/${licenseId}/attachments`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...metadata, s3Key: init.data.s3Key }) });
-        const complete = await completeResponse.json();
-        if (!completeResponse.ok || !complete.success) throw new Error(complete.error ?? `Unable to confirm ${file.name}.`);
-        setFiles(current => current.filter(candidate => candidate !== file));
-      }
+      await uploadLicenseFiles(licenseId, [...files], file => setFiles(current => current.filter(candidate => candidate !== file)));
       resetForm();
       router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to add license."); }
@@ -137,11 +145,17 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
   const [editing, setEditing] = useState<ContractLicenseRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<ContractLicenseRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState<LicenseFormState>({ licenseName: "", vendor: "", product: "", edition: "", quantity: 1, unit: "USERS", startDate: "", endDate: "", renewalStatus: "ACTIVE", note: "" });
+
+  useEffect(() => () => { if (preview?.url.startsWith("blob:")) URL.revokeObjectURL(preview.url); }, [preview]);
 
   function openEdit(license: ContractLicenseRow) {
     setEditing(license);
     setEditError(null);
+    setFiles([]);
     setForm({
       licenseName: license.licenseName,
       vendor: license.vendor ?? "",
@@ -159,6 +173,7 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
   async function saveEdit() {
     if (!editing) return;
     if (form.licenseName.trim().length < 2) { setEditError("License name is required."); return; }
+    if (!validateSelectedFiles(files)) { setEditError("Select up to 10 files, maximum 25 MB each."); return; }
     setSaving(true); setEditError(null);
     try {
       const response = await fetch(`/api/licenses/${editing.id}`, {
@@ -168,12 +183,34 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error ?? "Unable to update license.");
+      await uploadLicenseFiles(editing.id, [...files], file => setFiles(current => current.filter(candidate => candidate !== file)));
       setEditing(null);
       router.refresh();
     } catch (cause) {
       setEditError(cause instanceof Error ? cause.message : "Unable to update license.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  function showLocalPreview(file: File) {
+    if (preview?.url.startsWith("blob:")) URL.revokeObjectURL(preview.url);
+    setPreview({ url: URL.createObjectURL(file), type: mimeType(file), name: file.name });
+  }
+
+  async function deleteLicense() {
+    if (!deleteTarget) return;
+    setDeleting(true); setError(null);
+    try {
+      const response = await fetch(`/api/licenses/${deleteTarget.id}`, { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error ?? "Unable to delete license.");
+      setDeleteTarget(null);
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to delete license.");
+    } finally {
+      setDeleting(false);
     }
   }
   async function openFile(licenseId: string, file: LicenseFile) {
@@ -196,7 +233,10 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
         <Table.Td>{license.startDate ? new Date(license.startDate).toLocaleDateString("en-GB") : "–"} – {license.endDate ? new Date(license.endDate).toLocaleDateString("en-GB") : "–"}</Table.Td>
         <Table.Td><Badge color={license.renewalStatus === "ACTIVE" ? "green" : license.renewalStatus === "EXPIRED" ? "red" : "yellow"}>{license.renewalStatus.replaceAll("_", " ")}</Badge></Table.Td>
         <Table.Td><Group gap="xs">{license.files.length || "–"}{license.files.map(file => <Tooltip key={file.id} label={`Preview ${file.fileName}`}><ActionIcon variant="subtle" aria-label={`Preview ${file.fileName}`} onClick={() => openFile(license.id, file)}><Eye size={16} /></ActionIcon></Tooltip>)}</Group></Table.Td>
-        <Table.Td><Tooltip label={`Edit ${license.licenseName}`}><ActionIcon variant="default" aria-label={`Edit ${license.licenseName}`} onClick={() => openEdit(license)}><Pencil size={15} /></ActionIcon></Tooltip></Table.Td>
+        <Table.Td><Group gap="xs" justify="flex-end">
+          <Tooltip label={`Edit ${license.licenseName}`}><ActionIcon variant="default" aria-label={`Edit ${license.licenseName}`} onClick={() => openEdit(license)}><Pencil size={15} /></ActionIcon></Tooltip>
+          <Tooltip label={`Delete ${license.licenseName}`}><ActionIcon variant="default" color="red" aria-label={`Delete ${license.licenseName}`} onClick={() => setDeleteTarget(license)}><Trash2 size={15} /></ActionIcon></Tooltip>
+        </Group></Table.Td>
       </Table.Tr>)}</Table.Tbody>
     </Table></Table.ScrollContainer>
     <Modal opened={Boolean(editing)} onClose={() => !saving && setEditing(null)} title="Edit License" size="xl" centered closeOnClickOutside={!saving} closeOnEscape={!saving}>
@@ -214,11 +254,20 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
           <Select label="Status" data={["ACTIVE", "EXPIRING_SOON", "EXPIRED", "RENEWED", "CANCELLED"]} value={form.renewalStatus} onChange={value => setForm({ ...form, renewalStatus: value ?? "ACTIVE" })} />
         </SimpleGrid>
         <Textarea label="Note" value={form.note} onChange={event => setForm({ ...form, note: event.currentTarget.value })} maxLength={2000} autosize minRows={2} />
-        <Alert color="blue" variant="light">Existing license files are preserved when details are updated.</Alert>
+        <FileInput leftSection={<Upload size={16} />} label="Add historical license files or images" description="Existing files remain available. PDF, JPG, PNG, GIF, Word or Excel; up to 10 files, 25 MB each" placeholder="Select additional files" accept={ACCEPT} multiple clearable value={files} onChange={setFiles} />
+        {files.length > 0 && <List spacing="xs">{files.map(file => <List.Item key={`${file.name}-${file.lastModified}`} icon={file.type.startsWith("image/") ? <ImageIcon size={16} /> : <File size={16} />}>
+          <Group gap="xs"><Text size="sm">{file.name} ({readableSize(file.size)})</Text><Button variant="subtle" size="compact-xs" onClick={() => showLocalPreview(file)}>Preview</Button></Group>
+        </List.Item>)}</List>}
         <Group justify="flex-end">
           <Button variant="default" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button>
-          <Button onClick={saveEdit} loading={saving}>Save Changes</Button>
+          <Button onClick={saveEdit} loading={saving}>{files.length ? "Save & Upload" : "Save Changes"}</Button>
         </Group>
+      </Stack>
+    </Modal>
+    <Modal opened={Boolean(deleteTarget)} onClose={() => !deleting && setDeleteTarget(null)} title="Delete License" centered size="sm" closeOnClickOutside={!deleting} closeOnEscape={!deleting}>
+      <Stack>
+        <Alert color="red" title="Confirm deletion">Delete {deleteTarget?.licenseName}? It will be removed from this contract, while its audit history and stored files are retained for recovery.</Alert>
+        <Group justify="flex-end"><Button variant="default" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button><Button color="red" leftSection={<Trash2 size={16} />} onClick={deleteLicense} loading={deleting}>Delete License</Button></Group>
       </Stack>
     </Modal>
     <Modal opened={Boolean(preview)} onClose={() => setPreview(null)} title={preview?.name ?? "File preview"} size="xl" centered>{preview && <Preview {...preview} name={preview.name} />}</Modal>

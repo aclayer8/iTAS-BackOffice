@@ -24,6 +24,14 @@ test('license update endpoint enforces write permission and records an audit eve
   assert.match(route, /newValues:/);
 });
 
+test('license delete endpoint uses soft delete, delete permission and audit logging', () => {
+  const route = fs.readFileSync(path.join(__dirname, '..', 'src/app/api/licenses/[id]/route.ts'), 'utf8');
+  assert.match(route, /export async function DELETE/);
+  assert.match(route, /deletedAt/);
+  assert.match(route, /"license:delete"/);
+  assert.match(route, /action: "DELETE"/);
+});
+
 test('storage config prefers Neon AWS variables and keeps the private bucket default', () => {
   const config = storage.resolveStorageConfig({
     NODE_ENV: 'production',

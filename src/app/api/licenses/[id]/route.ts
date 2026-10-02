@@ -96,3 +96,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }, "license:write");
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withAuth(req, async (request, userId) => {
+    try {
+      const { id } = await params;
+      const existing = await prisma.license.findFirst({ where: { id, deletedAt: null } });
+      if (!existing) return notFound("License");
+
+      const deletedAt = new Date();
+      await prisma.license.update({ where: { id }, data: { deletedAt } });
+      await createAuditLog({
+        userId,
+        action: "DELETE",
+        entityType: "license",
+        entityId: existing.id,
+        oldValues: auditValues(existing),
+        newValues: { deletedAt: deletedAt.toISOString() },
+        description: "Removed license from contract",
+        req: request,
+      });
+
+      return ok({ id: existing.id });
+    } catch (error) {
+      return serverError(error);
+    }
+  }, "license:delete");
+}
