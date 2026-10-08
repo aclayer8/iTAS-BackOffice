@@ -1,7 +1,7 @@
 "use client";
 
-import { ActionIcon, Alert, Badge, Button, FileInput, Group, Image, List, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip } from "@mantine/core";
-import { Eye, File, ImageIcon, KeyRound, Pencil, Trash2, Upload } from "lucide-react";
+import { ActionIcon, Alert, Badge, Button, FileInput, Group, Image, List, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, ThemeIcon, Tooltip } from "@mantine/core";
+import { Download, Eye, File, FileImage, FileSpreadsheet, FileText, ImageIcon, KeyRound, Pencil, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -34,6 +34,17 @@ function mimeType(file: File) {
 
 function readableSize(bytes: number) {
   return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fileTypeLabel(file: Pick<LicenseFile, "fileName" | "mimeType">) {
+  return file.fileName.split(".").pop()?.toUpperCase() || file.mimeType.split("/").pop()?.toUpperCase() || "FILE";
+}
+
+function FileTypeIcon({ file, size = 18 }: { file: Pick<LicenseFile, "fileName" | "mimeType">; size?: number }) {
+  if (file.mimeType.startsWith("image/")) return <FileImage size={size} aria-hidden="true" />;
+  if (file.mimeType.includes("spreadsheet") || file.mimeType.includes("excel")) return <FileSpreadsheet size={size} aria-hidden="true" />;
+  if (file.mimeType === "application/pdf" || file.mimeType.includes("word")) return <FileText size={size} aria-hidden="true" />;
+  return <File size={size} aria-hidden="true" />;
 }
 
 function validateSelectedFiles(files: File[]) {
@@ -220,6 +231,20 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
     if (!response.ok || !result.success) { setError(result.error ?? "Unable to preview file."); return; }
     setPreview({ url: result.data.url, type: file.mimeType, name: file.fileName });
   }
+
+  async function downloadFile(licenseId: string, file: LicenseFile) {
+    setError(null);
+    const response = await fetch(`/api/licenses/${licenseId}/attachments/${file.id}?download=1`);
+    const result = await response.json();
+    if (!response.ok || !result.success) { setError(result.error ?? "Unable to download file."); return; }
+    const link = document.createElement("a");
+    link.href = result.data.url;
+    link.download = file.fileName;
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
   if (!licenses.length) return <Paper withBorder p="lg" mt="md"><Text c="dimmed" ta="center">No licenses linked to this contract.</Text></Paper>;
   return <Paper withBorder mt="md" radius="md">
     <Group justify="space-between" p="md"><Text fw={700} c="dark.8">Licenses ({licenses.length})</Text></Group>
@@ -232,7 +257,21 @@ export function ContractLicensePanel({ licenses }: { licenses: ContractLicenseRo
         <Table.Td>{license.quantity ?? "–"} {license.unit ?? ""}</Table.Td>
         <Table.Td>{license.startDate ? new Date(license.startDate).toLocaleDateString("en-GB") : "–"} – {license.endDate ? new Date(license.endDate).toLocaleDateString("en-GB") : "–"}</Table.Td>
         <Table.Td><Badge color={license.renewalStatus === "ACTIVE" ? "green" : license.renewalStatus === "EXPIRED" ? "red" : "yellow"}>{license.renewalStatus.replaceAll("_", " ")}</Badge></Table.Td>
-        <Table.Td><Group gap="xs">{license.files.length || "–"}{license.files.map(file => <Tooltip key={file.id} label={`Preview ${file.fileName}`}><ActionIcon variant="subtle" aria-label={`Preview ${file.fileName}`} onClick={() => openFile(license.id, file)}><Eye size={16} /></ActionIcon></Tooltip>)}</Group></Table.Td>
+        <Table.Td>{license.files.length ? <Stack gap={6} miw={250}>
+          {license.files.map(file => <Paper key={file.id} withBorder radius="sm" px="xs" py={6}>
+            <Group gap="xs" wrap="nowrap">
+              <ThemeIcon variant="light" color={file.mimeType === "application/pdf" ? "red" : file.mimeType.startsWith("image/") ? "blue" : "gray"} size="lg">
+                <FileTypeIcon file={file} />
+              </ThemeIcon>
+              <Stack gap={0} style={{ minWidth: 0, flex: 1 }}>
+                <Tooltip label={file.fileName} openDelay={500}><Text size="xs" fw={600} truncate>{file.fileName}</Text></Tooltip>
+                <Text size="xs" c="dimmed">{fileTypeLabel(file)} · {readableSize(file.fileSize)}</Text>
+              </Stack>
+              <Tooltip label={`Preview ${file.fileName}`}><ActionIcon variant="subtle" aria-label={`Preview ${file.fileName}`} onClick={() => openFile(license.id, file)}><Eye size={16} /></ActionIcon></Tooltip>
+              <Tooltip label={`Download ${file.fileName}`}><ActionIcon variant="subtle" color="gray" aria-label={`Download ${file.fileName}`} onClick={() => downloadFile(license.id, file)}><Download size={16} /></ActionIcon></Tooltip>
+            </Group>
+          </Paper>)}
+        </Stack> : <Text c="dimmed">–</Text>}</Table.Td>
         <Table.Td><Group gap="xs" justify="flex-end">
           <Tooltip label={`Edit ${license.licenseName}`}><ActionIcon variant="default" aria-label={`Edit ${license.licenseName}`} onClick={() => openEdit(license)}><Pencil size={15} /></ActionIcon></Tooltip>
           <Tooltip label={`Delete ${license.licenseName}`}><ActionIcon variant="default" color="red" aria-label={`Delete ${license.licenseName}`} onClick={() => setDeleteTarget(license)}><Trash2 size={15} /></ActionIcon></Tooltip>

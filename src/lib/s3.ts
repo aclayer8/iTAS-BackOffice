@@ -73,13 +73,13 @@ export async function verifyLicenseObject(key: string) {
   return { bucket, fileSize: result.ContentLength, mimeType: result.ContentType };
 }
 
-export async function createLicensePreviewUrl(key: string, fileName: string, mimeType: string) {
+export async function createLicenseFileUrl(key: string, fileName: string, mimeType: string, disposition: "inline" | "attachment" = "inline") {
   const { bucket } = resolveStorageConfig();
   const command = new GetObjectCommand({
     Bucket: bucket,
     Key: key,
     ResponseContentType: mimeType,
-    ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    ResponseContentDisposition: `${disposition}; filename*=UTF-8''${encodeURIComponent(fileName)}`,
   });
   return getSignedUrl(client(), command, { expiresIn: 300 });
 }

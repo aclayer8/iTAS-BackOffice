@@ -18,6 +18,7 @@ export function storageConnectSource(env: NodeJS.ProcessEnv = process.env) {
 export function contentSecurityPolicy(env: NodeJS.ProcessEnv = process.env) {
   const storageOrigin = storageConnectSource(env);
   const connectSources = ["'self'", storageOrigin].filter(Boolean).join(" ");
+  const frameSources = ["'self'", "blob:", storageOrigin].filter(Boolean).join(" ");
 
   return [
     "default-src 'self'",
@@ -26,5 +27,6 @@ export function contentSecurityPolicy(env: NodeJS.ProcessEnv = process.env) {
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
     `connect-src ${connectSources}`,
+    `frame-src ${frameSources}`,
   ].join("; ");
 }

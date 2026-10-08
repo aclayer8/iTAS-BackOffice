@@ -26,6 +26,15 @@ test('content security policy permits only the configured HTTPS storage origin',
   assert.equal(policy.includes('*'), false);
 });
 
+test('content security policy permits PDF frames only from self, blob and configured storage', () => {
+  const policy = securityHeaders.contentSecurityPolicy({
+    NODE_ENV: 'production',
+    AWS_ENDPOINT_URL_S3: 'https://storage.example.test/branch/path',
+  });
+  assert.match(policy, /frame-src 'self' blob: https:\/\/storage\.example\.test/);
+  assert.equal(policy.includes('frame-src *'), false);
+});
+
 test('content security policy rejects insecure production storage endpoints', () => {
   const policy = securityHeaders.contentSecurityPolicy({
     NODE_ENV: 'production',
@@ -80,6 +89,13 @@ test('license attachment validation requires matching allowlisted MIME and exten
   assert.equal(storage.validateLicenseFile('evidence.JPG', 'image/jpeg', 1024), null);
   assert.equal(storage.validateLicenseFile('license.exe', 'application/pdf', 1024), 'Unsupported file type');
   assert.equal(storage.validateLicenseFile('license.pdf.exe', 'application/octet-stream', 1024), 'Unsupported file type');
+});
+
+test('license attachment endpoint requires read permission and supports download disposition', () => {
+  const route = fs.readFileSync(path.join(__dirname, '..', 'src/app/api/licenses/[id]/attachments/[attachmentId]/route.ts'), 'utf8');
+  assert.match(route, /"license:read"/);
+  assert.match(route, /searchParams\.get\("download"\) === "1"/);
+  assert.match(route, /"attachment" : "inline"/);
 });
 
 test('license attachment validation rejects empty, fractional and oversized files', () => {
