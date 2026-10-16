@@ -14,5 +14,5 @@ export default async function UsersPage() {
     select: { id: true, name: true, email: true, role: true, status: true, mustChangePassword: true, lastLoginAt: true },
     orderBy: [{ name: "asc" }, { email: "asc" }],
   });
-  return <UserManager initialUsers={users.map((user) => ({ ...user, lastLoginAt: user.lastLoginAt?.toISOString() ?? null }))} />;
+  return <UserManager currentUserId={session.user.id} initialUsers={users.map((user) => ({ ...user, lastLoginAt: user.lastLoginAt?.toISOString() ?? null }))} />;
 }
