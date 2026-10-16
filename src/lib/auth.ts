@@ -43,6 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             passwordHash: true,
             role: true,
             status: true,
+            mustChangePassword: true,
           },
         });
 
@@ -73,6 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role as UserRole,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -83,6 +85,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = (user as { role: UserRole }).role;
         token.id = user.id;
+        token.mustChangePassword = Boolean(user.mustChangePassword);
       }
       return token;
     },
@@ -90,6 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role as UserRole;
+        session.user.mustChangePassword = Boolean(token.mustChangePassword);
       }
       return session;
     },

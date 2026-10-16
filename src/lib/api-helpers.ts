@@ -74,6 +74,15 @@ export async function withAuth(
 
     const { id: userId, role } = session.user as { id: string; role: UserRole };
 
+    const account = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true, deletedAt: true, mustChangePassword: true },
+    });
+    if (!account || account.deletedAt || account.status !== "ACTIVE") return unauthorized();
+    if (account.mustChangePassword && !req.nextUrl.pathname.endsWith("/change-password")) {
+      return NextResponse.json({ success: false, error: "Password change required" }, { status: 403 });
+    }
+
     if (permission && !hasPermission(role, permission)) {
       return forbidden();
     }

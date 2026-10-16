@@ -16,6 +16,7 @@ import {
   Menu,
   Search,
   Upload,
+  UserCog,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -33,6 +34,7 @@ const navItems = [
   { icon: Upload, label: "Import", href: "/import" },
   { icon: Search, label: "Search", href: "/search" },
   { icon: KeyRound, label: "Licenses", href: "/licenses" },
+  { icon: UserCog, label: "Users", href: "/settings/users", adminOnly: true },
   { icon: BarChart3, label: "Reports", href: "/api/reports/contracts?format=xlsx" },
 ];
 
@@ -44,6 +46,7 @@ const pageLabels: Record<string, string> = {
   "/import": "Import Data",
   "/search": "Search",
   "/licenses": "Licenses",
+  "/settings/users": "User Management",
 };
 
 function getPageLabel(pathname: string) {
@@ -116,7 +119,7 @@ export default function AppShellClient({
 
         <div className="app-section-label">Main Menu</div>
         <nav className="app-nav">
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.adminOnly || user.role === "ADMIN").map((item) => {
             const Icon = item.icon;
             const active =
               item.href !== "/api/reports/contracts?format=xlsx" &&
