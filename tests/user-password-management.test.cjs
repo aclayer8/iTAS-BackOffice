@@ -36,3 +36,13 @@ test("user management endpoints enforce permissions and forced password changes"
   assert.match(change, /bcrypt\.compare/);
   assert.match(change, /mustChangePassword: false/);
 });
+
+test("user edit and delete are admin-only and protect administrator access", () => {
+  const route = fs.readFileSync(path.join(__dirname, "..", "src/app/api/users/[id]/route.ts"), "utf8");
+  assert.match(route, /"user:write"/);
+  assert.match(route, /"user:delete"/);
+  assert.match(route, /You cannot delete your own account/);
+  assert.match(route, /At least one active administrator is required/);
+  assert.match(route, /deletedAt: new Date\(\)/);
+  assert.match(route, /TransactionIsolationLevel\.Serializable/);
+});
